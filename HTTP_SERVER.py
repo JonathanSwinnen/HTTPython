@@ -1,5 +1,6 @@
 # import socket programming library
 import socket
+import mimetypes
 
 # import thread module
 from _thread import *
@@ -14,14 +15,32 @@ def threaded(c):
     method = ""
     uri = ""
     httpv = ""
+    total = ""
     headers = dict()
     while True:
 
         print("-- READ LOOP: NEW CHUNK")
         # receive
-        data_chunk = c.recv(1)
+        try:
+            data_chunk = c.recv(1024)
+        except c.timeout as e:
+            err = e.args[0]
+            # this next if/else is a bit redundant, but illustrates how the
+            # timeout exception is setup
+            if err == 'timed out':
+                print('recv timed out, retry later')
+                continue
+            else:
+                print(e)
+                break
+        except c.error as e:
+            # Something else happened, handle error, exit, etc.
+            print(e)
+            break
+
         req += data_chunk.decode()
-        print("carry + chunk received ::\n" + req)
+        total += data_chunk.decode()
+        print("carry + chunk received ::\n\n" + req)
         print("\n::end received")
         recv_lines = req.split("\r\n")
 
@@ -52,19 +71,35 @@ def threaded(c):
                     print(header_line)
                     headers[header_line[0]] = header_line[1].strip()
                 else:
-                    print("END")
-
+                    print("END parsing")
+                    print(total)
+                    respond(c, method, uri, httpv, headers)
+                    method = ""
+                    uri = ""
+                    headers = dict()
+                    httpv = ""
+                    req = ""
+                    c.close()
+                    return
         print(method)
         print(uri)
         print(httpv)
         print(headers)
-        if not data_chunk:
-            break
-
-    http_response = "hya"
-    c.sendall(http_response)
-    c.close()
     print("ended connection")
+
+
+def respond(c, method, uri, httpv, headers):
+    if method == "GET":
+        print("responding to GET request")
+        if uri == '/':
+            uri = '/index.html'
+        content_type = mimetypes.guess_type(uri)[0] or 'text/html'
+
+        fin = open('webpage' + uri, "rb")
+        content = fin.read()
+        fin.close()
+        response = ('HTTP/1.0 200 OK\nContent-Type: '+content_type+'\n\n').encode() + content
+        c.sendall(response)
 
 def Main():
     host = "127.0.0.1"
@@ -72,6 +107,7 @@ def Main():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.bind((host, port))
+    s.settimeout(2)
     print("socket binded to port", port)
     # put the socket into listening mode
     s.listen()
@@ -81,11 +117,13 @@ def Main():
     try:
         while True:
             # establish connection with client
-            c, a = s.accept()
+            try:
+                c, a = s.accept()
+            except socket.timeout as e:
+                continue
             print('Connected to :', a[0], ':', a[1])
             # Start a new thread and return its identifier
-            #start_new_thread(threaded, (c,))
-            threaded(c)
+            start_new_thread(threaded, (c,))
         s.close()
     except KeyboardInterrupt:
         pass
