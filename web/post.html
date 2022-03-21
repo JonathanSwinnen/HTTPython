@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <form action="data/post_data.txt" method="POST" target="hiddenframe">
+        <label for="num">Number:</label>
+        <input type="number" id="num" name="num"><br><br>
+        <label for="str">String:</label>
+        <input type="text" id="str" name="str"><br><br>
+        <input type="submit" value="Submit" onclick="reload_iframe()">
+    </form>
+    <br><br>
+    post_data.txt contents through iframe:<br>
+    <iframe src="data/post_data.txt" id="frame"></iframe>
+    <iframe style="display:none" name="hiddenframe"></iframe>
+    <script src="script/reload_iframe.js"></script>
+</body>
+</html>
