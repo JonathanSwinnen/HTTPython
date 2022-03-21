@@ -65,7 +65,7 @@ def handle_connection(c):
         print("writing to: " + parsed_uri.path)
         if method == "POST":
             with open(path, "a") as f:
-                f.write(body)
+                f.write(body+"\n")
         else:
             with open(path, "w+") as f:
                 f.write(body)
@@ -127,13 +127,6 @@ def read_head(c):
                     print("END HEADERS\n")
                     reading_head = False
     return method, uri, httpv, headers, total
-
-
-
-def respond(c, method, uri, httpv, headers, body):
-
-    print("responding with header")
-
 
 
 def getmyip():
