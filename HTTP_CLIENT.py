@@ -1,14 +1,16 @@
 import socket
 PORT = 80
 ALLOWED_COMMANDS = ["HEAD", "GET", "PUT", "POST"]
-test_command = "test"
+REQUESTED_PAGES_FOLDER = "requested_pages/"
 
 def input_handler():
-    user_input = input("HTTP request: ")
-    http_command, URI = user_input.split(" ")[:2]
+    user_input = input("HTTP request: ").split(" ")
+    http_command, URI = user_input[0], user_input[1]
     if http_command not in ALLOWED_COMMANDS:
         print("Not an allowed command, allowed commands are: ", *ALLOWED_COMMANDS)
         return
+    if len(user_input) > 2:
+        port = user_input[2]
     stripped_URI = URI.split("/", 3)
     #print(stripped_URI, len(stripped_URI))
     host = stripped_URI[2]
@@ -26,18 +28,18 @@ def send_request(http_command, host, path):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((host, PORT))
         s.send(bytes(request, 'UTF-8'))
-        response_handler(http_command, s, host)
+        response_handler(http_command, s, host, path)
 
 
-def response_handler(http_command, s, host):
+def response_handler(http_command, s, host, path):
     data = s.recv(1024)
     all_data = data
     while len(data) == 1024:
         data = s.recv(1024)
         all_data += data
-    print(all_data)
+    print(all_data, len(data))
     if http_command == "GET":
-        f = open(host + ".html", "w")
+        f = open(REQUESTED_PAGES_FOLDER + host + ".html", "w")
         f.write(str(all_data, "UTF-8"))
         f.close()
     s.close()
