@@ -19,28 +19,33 @@ def input_handler():
         path += stripped_URI[3]
     #print(http_command, URI)
     print(http_command, host, path)
-    if (http_command == "HEAD"):
-        return send_request(http_command, host, path)
-    elif (http_command == "GET"):
-        header = send_request("HEAD", host, path)
-        is_chunked, content_length = extract_metadata(header)
-        print(int(content_length))
-        full_page_size = len(header) + int(content_length)
-        print(full_page_size)
-        dummy = send_request("GET", host, path, is_chunked, int(content_length))
+    command_handler(http_command, host, path)
 
-
-
-def send_request(http_command, host, path, is_chunked=None, content_length=None):
-    request = http_command + " " + path + " HTTP/1.1\r\nHost: " + host + "\r\n\r\n"
-    print(request)
+def command_handler(http_command, host, path):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((host, PORT))
-        s.send(bytes(request, 'UTF-8'))
-        return response_handler(http_command, s, host, is_chunked, content_length)
+        if (http_command == "HEAD"):
+            dummy = send_request(http_command, host, path, s)
+        elif (http_command == "GET"):
+            # header = send_request("HEAD", host, path, s)
+            # is_chunked, content_length = extract_metadata(header)
+            # print(int(content_length))
+            # full_page_size = len(header) + int(content_length)
+            # print(full_page_size)
+            dummy = send_request("GET", host, path, s)
+        s.close()
 
 
-def response_handler(http_command, s, host, is_chunked=None, content_length=None):
+
+def send_request(http_command, host, path, s):
+    request = http_command + " " + path + " HTTP/1.1\r\nHost: " + host + "\r\n\r\n"
+    print(request)
+    s.send(bytes(request, 'UTF-8'))
+    return response_handler(http_command, host, s)
+    
+
+
+def response_handler(http_command, host, s):
     if http_command == "HEAD":
         data = s.recv(1024)
         all_data = data
@@ -48,16 +53,40 @@ def response_handler(http_command, s, host, is_chunked=None, content_length=None
             data = s.recv(1024)
             all_data += data
     elif http_command == "GET":
+        first_part_of_data = s.recv(1024)
+        all_data = first_part_of_data
+        print(all_data)
+        print(len(all_data))
+        is_chunked, content_length = extract_metadata(all_data)
+        print(int(content_length))
+        # full_page_size = len(header) + int(content_length)
+        # print(full_page_size)
+        # dummy = send_request("GET", host, path, is_chunked, int(content_length))
+
         if is_chunked:
-            pass
+            print("chunked transfer encoding is not yet supported")
         else:
-            all_data = s.recv(content_length)
-        f = open(host + ".html", "w")
+            print(first_part_of_data[:determine_header_length(first_part_of_data)])
+            remaining_content_length = int(content_length) - (len(first_part_of_data) - determine_header_length(first_part_of_data))
+            print(remaining_content_length)
+            data = s.recv(int(content_length))
+            print(data)
+            print(len(data))
+            all_data += data
+        f = open(REQUESTED_PAGES_FOLDER + host + ".html", "w")
         f.write(str(all_data, "UTF-8"))
         f.close()
-    s.close()
     print(all_data)
+    print(len(all_data))
     return all_data
+
+"""
+determine header length
+"""
+def determine_header_length(first_part_of_data):
+    CLRF = b"\r\n\r\n"
+    header_end_index = first_part_of_data.find(CLRF)
+    return header_end_index + len(CLRF)
 
 """
 determine if content is chunked or not
