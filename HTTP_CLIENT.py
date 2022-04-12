@@ -1,6 +1,7 @@
 import socket
 PORT = 80
 ALLOWED_COMMANDS = ["HEAD", "GET", "PUT", "POST"]
+test_command = "test"
 
 def input_handler():
     user_input = input("HTTP request: ")
