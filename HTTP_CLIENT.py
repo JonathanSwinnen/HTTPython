@@ -1,4 +1,5 @@
 import socket
+from urllib.parse import urlparse
 PORT = 80
 ALLOWED_COMMANDS = ["HEAD", "GET", "PUT", "POST"]
 REQUESTED_PAGES_FOLDER = "requested_pages/"
@@ -54,6 +55,7 @@ def response_handler(http_command, host, s):
             all_data += data
     elif http_command == "GET":
         first_part_of_data = s.recv(1024)
+        # check if end of header is found (CRLF)
         all_data = first_part_of_data
         print(all_data)
         print(len(all_data))
