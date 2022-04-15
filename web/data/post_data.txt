@@ -1,2 +1,2 @@
-num=1&str=test
-num=2&str=abc
+num=1000&str=test
+num=2000&str=test2
