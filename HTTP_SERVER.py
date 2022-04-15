@@ -13,7 +13,11 @@ import threading
 # thread function
 def handle_connection(c):
     print("\n--- CONNECTION: STARTED THREAD ---")
-    method, uri, httpv, headers, total = read_head(c)
+    initial_line, headers, total = read_head(c)
+    command = initial_line.split(" ")
+    method = command[0]
+    uri = command[1]
+    httpv = command[2]
     print("got request: \n" + total)
     # if not full uri (form: http://server/path) --> convert so we can use urlparse
 
@@ -90,7 +94,6 @@ def Main():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.bind((host, port))
-    s.settimeout(2)
     print("socket binded @ " + host + ":"+str(port))
     # put the socket into listening mode
     s.listen()
@@ -100,10 +103,7 @@ def Main():
     try:
         while True:
             # establish connection with client
-            try:
-                c, a = s.accept()
-            except socket.timeout as e:
-                continue
+            c, a = s.accept()
             print('Connected to :', a[0], ':', a[1])
             # Start a new thread and return its identifier
             #start_new_thread(handle_connection, (c,))

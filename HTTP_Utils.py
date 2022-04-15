@@ -1,8 +1,6 @@
 def read_head(c):
     req = ""
-    method = ""
-    uri = ""
-    httpv = ""
+    initial_line = ""
     total = ""
     headers = dict()
     reading_head = True
@@ -37,11 +35,8 @@ def read_head(c):
                     req = ""
                 else:  # incomplete line at the end
                     req = line  # continue receiving last request line
-            elif method == "":  # expecting Request-Line (method, uri, http version)
-                req_line = line.split(" ")
-                method = req_line[0]
-                uri = req_line[1]
-                httpv = req_line[2]
+            elif initial_line == "":  # expecting Request-Line (method, uri, http version)
+                initial_line = line
                 print("\nread request-line: " + line + "   , expecting headers ...")
             else:  # expecting headers or newline to end
                 if line != "":
@@ -52,4 +47,4 @@ def read_head(c):
                 else:  # CRLF after headers --> end request or body
                     print("END HEADERS\n")
                     reading_head = False
-    return method, uri, httpv, headers, total
+    return initial_line, headers, total
