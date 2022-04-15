@@ -1,6 +1,6 @@
 import socket
 import HTTP_Utils
-PORT = 80
+PORT = 8000
 ALLOWED_COMMANDS = ["HEAD", "GET", "PUT", "POST"]
 REQUESTED_PAGES_FOLDER = "requested_pages/"
 
@@ -31,7 +31,7 @@ def command_handler(http_command, host, path):
             request += "\r\n"
         if http_command == "PUT" or http_command == "POST":
             data_to_send = input("Data to send: ")
-            request += "Content-Length: " + len(data_to_send) + "\r\n"
+            request += "Content-Length: " + str(len(data_to_send)) + "\r\n"
             request += "\r\n"
             request += data_to_send
         s.send(bytes(request, 'UTF-8'))
@@ -74,7 +74,7 @@ def response_handler(http_command, host, s):
         f.close()
     print(all_data)
     print(len(all_data))
-    print(http_command + "-request returned with status code: ", *initial_line.split(" ")[1:])
+    print(http_command + " request returned with status code: ", *initial_line.split(" ")[1:])
     # return all_data
 
 """
