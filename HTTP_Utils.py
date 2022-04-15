@@ -8,22 +8,12 @@ def read_head(c):
         # receive
         try:
             data_chunk = c.recv(1)
-        except c.timeout as e:
-            err = e.args[0]
-            # this next if/else is a bit redundant, but illustrates how the
-            # timeout exception is setup
-            if err == 'timed out':
-                print('TIMEOUT')
-                break
-            else:
-                print(e)
-                break
         except c.error as e:
-            # Something else happened, handle error, exit, etc.
+            # Something happened ?
             print(e)
             break
         req += data_chunk.decode()
-        print(req)
+        # print(req)
         total += data_chunk.decode()
         recv_lines = req.split("\r\n")
         # parse received lines

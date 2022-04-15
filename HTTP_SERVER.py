@@ -13,72 +13,78 @@ import threading
 # thread function
 def handle_connection(c):
     print("\n--- CONNECTION: STARTED THREAD ---")
-    initial_line, headers, total = read_head(c)
-    command = initial_line.split(" ")
-    method = command[0]
-    uri = command[1]
-    httpv = command[2]
-    print("got request: \n" + total)
-    # if not full uri (form: http://server/path) --> convert so we can use urlparse
+    while True:  # persistent connection: keep looping
+        initial_line, headers, total = read_head(c)
+        command = initial_line.split(" ")
+        method = command[0]
+        uri = command[1]
+        httpv = command[2]
+        print("got request: \n" + total)
+        # if not full uri (form: http://server/path) --> convert so we can use urlparse
 
-    if uri.startswith("/"):
-        if uri == "/":
-            uri = "/index.html"
-        uri = "http://" + c.getsockname()[0] + uri
-    parsed_uri = urlparse(uri)
-    path = os.getcwd() + "/web" + parsed_uri.path
+        path = getpath(uri)
 
-    if method == "GET" or method == "HEAD":
         response = "HTTP/1.1 "
-        content = ""
-        content_type = 'text/html'
-        print("get path: " + path)
-        if not os.path.isfile(path):
-            print("not found!!")
-            response += "404 Not Found"
-            content = "Sorry! The requested file was not found on our server :(".encode()
-        else:
-            response += '200 OK'
-            content_type = mimetypes.guess_type(uri)[0] or 'text/html'
-            fin = open(path, "rb")
-            content = fin.read()
-            fin.close()
 
-        response += "\r\nContent-Type: " + content_type
-        response += "\r\nDate: " + formatdate(timeval=None, localtime=False, usegmt=True)
-        response += "\r\n\r\n"
+        if method == "GET" or method == "HEAD":
+            content = ""
+            content_type = 'text/html'
+            print("get path: " + path)
+            if not os.path.isfile(path):
+                print("not found!!")
+                response += "404 Not Found"
+                content = "Sorry! The requested file was not found on our server :(".encode()
+            else:
+                response += '200 OK'
+                content_type = mimetypes.guess_type(uri)[0] or 'text/html'
+                fin = open(path, "rb")
+                content = fin.read()
+                fin.close()
 
-        c.send(response.encode())
-        if method == "GET":
-            c.sendall(content)
+            response += "\r\nContent-Length: " + str(len(content))
+            response += "\r\nContent-Type: " + content_type
+            response += "\r\nDate: " + formatdate(timeval=None, localtime=False, usegmt=True)
+            response += "\r\n\r\n"
 
-    elif method == "POST" or method == "PUT":
-        cl = int(headers.get("content-length"))
-        body = ""
-        if cl is None:
-            print("no content-length given!")
-            pass  # bad request
-        else:
-            while len(body) < cl:
-                body += c.recv(cl-len(body)).decode()
-                print("reading body: " + body)
-            if not len(body) == cl:
-                print("body size does not equal content-length!")
+            c.send(response.encode())
+            if method == "GET":
+                c.sendall(content)
+
+        elif method == "POST" or method == "PUT":
+            cl = int(headers.get("content-length"))
+            body = ""
+            if cl is None:
+                print("no content-length given!")
                 pass  # bad request
+            else:
+                while len(body) < cl:
+                    body += c.recv(cl-len(body)).decode()
+                    print("reading body: " + body)
+                if not len(body) == cl:
+                    print("body size does not equal content-length!")
+                    pass  # bad request
 
-        print("writing to: " + parsed_uri.path)
-        if method == "POST":
-            with open(path, "a") as f:
-                f.write(body+"\n")
-        else:
-            with open(path, "w+") as f:
-                f.write(body)
-        print("done writing")
+            print("writing to: " + path)
+            if method == "POST":
+                with open(path, "a") as f:
+                    f.write(body+"\n")
+            else:
+                with open(path, "w+") as f:
+                    f.write(body)
+            c.sendall("HTTP/1.1 200 OK\r\n\r\n".encode())
+            print("done writing")
+        break
     c.close()
     print("--- CONNECTION CLOSED ---")
 
 
-
+def getpath(uri):
+    if uri.startswith("/"):
+        if uri == "/":
+            uri = "/index.html"
+        uri = "http://" + getmyip() + uri
+    parsed_uri = urlparse(uri)
+    return os.getcwd() + "/web" + parsed_uri.path
 
 def getmyip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
