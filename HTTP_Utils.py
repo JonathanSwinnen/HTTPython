@@ -23,7 +23,7 @@ def read_head(c):
             print(e)
             break
         req += data_chunk.decode()
-        print(req)
+        # print(req)
         total += data_chunk.decode()
         recv_lines = req.split("\r\n")
         # parse received lines
@@ -37,14 +37,14 @@ def read_head(c):
                     req = line  # continue receiving last request line
             elif initial_line == "":  # expecting Request-Line (method, uri, http version)
                 initial_line = line
-                print("\nread request-line: " + line + "   , expecting headers ...")
+                # print("\nread request-line: " + line + "   , expecting headers ...")
             else:  # expecting headers or newline to end
                 if line != "":
-                    print("\nreading header: " + line)
+                    # print("\nreading header: " + line)
                     header_line = line.split(":", 1)
-                    print(header_line)
+                    # print(header_line)
                     headers[header_line[0].lower()] = header_line[1].strip()
                 else:  # CRLF after headers --> end request or body
-                    print("END HEADERS\n")
+                    # print("END HEADERS\n")
                     reading_head = False
     return initial_line, headers, total
