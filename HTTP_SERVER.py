@@ -119,6 +119,7 @@ def handle_connection(c):
     print("\n--- CONNECTION CLOSED ---")
 
 
+# handles HEAD and GET requests
 def retrieve(path, headers, include_body):
     # respond 404
     if not os.path.isfile(path):
@@ -162,6 +163,7 @@ def retrieve(path, headers, include_body):
     return generate_response("200 OK", content, add_headers, include_body)
 
 
+# handles PUT and POST requests
 def store(path, headers, c, overwrite):
     cl = int(headers.get("content-length"))
     chunked = False
@@ -205,6 +207,7 @@ def store(path, headers, c, overwrite):
             )
 
 
+# 500 internal error test
 def crash(test):
     print("-- Internal Server Error test: ")
     if test == "div-by-zero":
@@ -216,6 +219,7 @@ def crash(test):
         raise Exception("custom exception")
 
 
+# generates response bytes
 def generate_response(code, body=None, additional_headers=dict(), include_body=True, close=False):
     # initial response line
     resp_str = "HTTP/1.1 " + code
@@ -259,6 +263,7 @@ def generate_response(code, body=None, additional_headers=dict(), include_body=T
     return response, resp_str, close
 
 
+# gets server ip
 def getmyip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect(("8.8.8.8", 80))
