@@ -1,6 +1,6 @@
 import socket
-from urllib.parse import urlparse
-PORT = 80
+import HTTP_Utils
+PORT = 8000
 ALLOWED_COMMANDS = ["HEAD", "GET", "PUT", "POST"]
 REQUESTED_PAGES_FOLDER = "requested_pages/"
 
@@ -22,65 +22,60 @@ def input_handler():
     print(http_command, host, path)
     command_handler(http_command, host, path)
 
+
 def command_handler(http_command, host, path):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((host, PORT))
-        if (http_command == "HEAD"):
-            dummy = send_request(http_command, host, path, s)
-        elif (http_command == "GET"):
-            # header = send_request("HEAD", host, path, s)
-            # is_chunked, content_length = extract_metadata(header)
-            # print(int(content_length))
-            # full_page_size = len(header) + int(content_length)
-            # print(full_page_size)
-            dummy = send_request("GET", host, path, s)
+        request = http_command + " " + path + " HTTP/1.1\r\nHost: " + host + "\r\n"
+        if http_command == "HEAD" or http_command == "GET":
+            request += "\r\n"
+        if http_command == "PUT" or http_command == "POST":
+            data_to_send = input("Data to send: ")
+            request += "Content-Length: " + str(len(data_to_send)) + "\r\n"
+            request += "\r\n"
+            request += data_to_send
+        s.send(bytes(request, 'UTF-8'))
+        response_handler(http_command, host, s)
         s.close()
 
 
 
-def send_request(http_command, host, path, s):
-    request = http_command + " " + path + " HTTP/1.1\r\nHost: " + host + "\r\n\r\n"
-    print(request)
-    s.send(bytes(request, 'UTF-8'))
-    return response_handler(http_command, host, s)
-    
+# def send_request(request, s):
+#     print(request)
+        
 
 
 def response_handler(http_command, host, s):
-    if http_command == "HEAD":
-        data = s.recv(1024)
-        all_data = data
-        while len(data) == 1024:
-            data = s.recv(1024)
-            all_data += data
-    elif http_command == "GET":
-        first_part_of_data = s.recv(1024)
+    initial_line, headers, all_data = HTTP_Utils.read_head(s)
+    if http_command == "GET":
+        # first_part_of_data = s.recv(1024)
         # check if end of header is found (CRLF)
-        all_data = first_part_of_data
         print(all_data)
         print(len(all_data))
-        is_chunked, content_length = extract_metadata(all_data)
-        print(int(content_length))
-        # full_page_size = len(header) + int(content_length)
-        # print(full_page_size)
+        print(headers)
+        # is_chunked, content_length = extract_metadata(all_data)
+        # print(int(content_length))
         # dummy = send_request("GET", host, path, is_chunked, int(content_length))
 
-        if is_chunked:
+        if headers.get("transfer-encoding") == "chunked":
             print("chunked transfer encoding is not yet supported")
         else:
-            print(first_part_of_data[:determine_header_length(first_part_of_data)])
-            remaining_content_length = int(content_length) - (len(first_part_of_data) - determine_header_length(first_part_of_data))
-            print(remaining_content_length)
-            data = s.recv(int(content_length))
+            # print(first_part_of_data[:determine_header_length(first_part_of_data)])
+            # remaining_content_length = int(content_length) - (len(first_part_of_data) - determine_header_length(first_part_of_data))
+            # print(remaining_content_length)
+            content_length = int(headers.get("content-length"))
+            print(content_length)
+            data = s.recv(int(content_length)).decode()
             print(data)
             print(len(data))
             all_data += data
         f = open(REQUESTED_PAGES_FOLDER + host + ".html", "w")
-        f.write(str(all_data, "UTF-8"))
+        f.write(all_data)
         f.close()
     print(all_data)
     print(len(all_data))
-    return all_data
+    print(http_command + " request returned with status code: ", *initial_line.split(" ")[1:])
+    # return all_data
 
 """
 determine header length

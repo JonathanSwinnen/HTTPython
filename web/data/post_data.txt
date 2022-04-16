@@ -1,2 +1,2 @@
-num=2&str=test
-num=2&str=test2
+Hello world!
+num=100&str=HALLO
