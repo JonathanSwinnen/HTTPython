@@ -2,6 +2,13 @@ import socket
 
 
 def read_head(c):
+    """
+    This function reads data from a socket and interprets it as an HTTP request + headers.
+    After a double CRLF it stops reading. To continue reading the body, use the function read_body
+
+    :param c: (socket) the socket to read from
+    :return: a tuple containing the initial request line, a dictionary with the headers, the total head as a string, and an error message.
+    """
     error = "ok"
     req = ""
     initial_line = ""
@@ -44,6 +51,16 @@ def read_head(c):
 
 
 def read_body(c, content_length=0, chunked=False):
+    """
+    This function reads data from a socket and interprets it as the body of a http request.
+
+    :param c: (socket) the socket to read from
+    :param content_length: (int) content length specified in the content-length header. default 0. if chunked=True,
+        this value is ignored.
+    :param chunked: (bool) content-encoding is chunked
+    :return: a tuple containing a string representing the decoded body, and an error message
+        (at this time, only string bodies are implemented)
+    """
     body = b""
     err = "ok"
     if not chunked:
@@ -69,6 +86,19 @@ def read_body(c, content_length=0, chunked=False):
 
 
 def parse_uri(uri, host=None, port=80):
+    """
+    This function parses a given uri
+    :param uri: (string) the uri that should be parsed
+    :param host: (string) optional. if the hostname is known, specify it to improve accuracy
+    :param port: (int) optional. default=80. if the hostname is specified, but the port is not 80, change it
+    :return: an object with the following properties:
+        obj.scheme (string)
+        obj.host (string)
+        obj.port (int)
+        obj.path (string)
+        obj.query (string)
+        obj.err (string, error message)
+    """
     split_scheme = uri.split("://", 1)
     stripped_uri = ""
     ret = type('', (object,),
