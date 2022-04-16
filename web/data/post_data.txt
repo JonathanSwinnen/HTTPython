@@ -1,0 +1,2 @@
+num=2&str=test
+num=2&str=test2
