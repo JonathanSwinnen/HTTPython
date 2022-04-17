@@ -38,3 +38,22 @@ def read_head(c):
                     # print("END HEADERS\n")
                     reading_head = False
     return initial_line, headers, total
+
+
+def determine_chunk_size(c):
+    req = ""
+    reading_chunk_size = True
+    while reading_chunk_size:
+        # receive
+        try:
+            data_chunk = c.recv(1)
+        except c.error as e:
+            # Something happened ?
+            print(e)
+            break
+        req += data_chunk.decode()
+        if req[-2:] == "\r\n":
+            chunk_size = req[:-2]
+            # print(chunk_size)
+            reading_chunk_size = False
+    return int(chunk_size, 16)

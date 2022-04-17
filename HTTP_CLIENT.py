@@ -1,6 +1,6 @@
 import socket
 import HTTP_Utils
-PORT = 8000
+PORT = 80
 ALLOWED_COMMANDS = ["HEAD", "GET", "PUT", "POST"]
 REQUESTED_PAGES_FOLDER = "requested_pages/"
 
@@ -58,7 +58,31 @@ def response_handler(http_command, host, s):
         # dummy = send_request("GET", host, path, is_chunked, int(content_length))
 
         if headers.get("transfer-encoding") == "chunked":
-            print("chunked transfer encoding is not yet supported")
+            next_chunk_size = HTTP_Utils.determine_chunk_size(s)
+            receive_4k_chunk_times = next_chunk_size // 4096
+            remaining_size = next_chunk_size % 4096
+            chunk_data = ""
+            print("next chunk size: ", next_chunk_size)
+            print(str(receive_4k_chunk_times) + ", " + str(remaining_size))
+            for _ in range(receive_4k_chunk_times):
+                data = s.recv(4096).decode()
+                print(data)
+                print(len(data))
+                print("====================")
+                chunk_data += data
+            data = s.recv(remaining_size).decode()
+            print(data)
+            print(len(data))
+            print("====================")
+            chunk_data += data
+            print(len(chunk_data))
+            all_data += chunk_data
+            data = s.recv(4096).decode()
+            print("++++++++++++++++++++++++++++")
+            print(data)
+            print(len(data))
+            print("====================")
+            chunk_data += data
         else:
             # print(first_part_of_data[:determine_header_length(first_part_of_data)])
             # remaining_content_length = int(content_length) - (len(first_part_of_data) - determine_header_length(first_part_of_data))
