@@ -53,7 +53,7 @@ def command_handler(http_command, host, path):
 
 
 def response_handler(http_command, host, s):
-    initial_line, headers, header_data = HTTP_Utils.read_head(s)
+    initial_line, headers, header_data = HTTP_utils.read_head(s)
     if http_command == "GET":
         print(header_data)
         print(len(header_data))
@@ -63,7 +63,7 @@ def response_handler(http_command, host, s):
             content_length = 0
         else:
             content_length = int(headers.get("content-length"))
-        html_data, error = HTTP_Utils.read_body(s, content_length, chunked)
+        html_data, error = HTTP_utils.read_body(s, content_length, chunked)
         # write received html data to file
         f = open(REQUESTED_PAGES_FOLDER + host + ".html", "w")
         f.write(html_data)
