@@ -1,5 +1,8 @@
 import socket
 import HTTP_Utils
+from bs4 import BeautifulSoup
+# import sys
+# print(sys.version)
 PORT = 80
 ALLOWED_COMMANDS = ["HEAD", "GET", "PUT", "POST"]
 REQUESTED_PAGES_FOLDER = "requested_pages/"
@@ -12,13 +15,14 @@ def input_handler():
         return
     if len(user_input) > 2:
         port = user_input[2]
+    # parsed_URI = HTTP_Utils.parse_uri(URI)
     stripped_URI = URI.split("/", 3)
     #print(stripped_URI, len(stripped_URI))
     host = stripped_URI[2]
     path = "/"
     if len(stripped_URI) >= 4:
         path += stripped_URI[3]
-    #print(http_command, URI)
+    print(http_command, URI)
     print(http_command, host, path)
     command_handler(http_command, host, path)
 
@@ -26,7 +30,9 @@ def input_handler():
 def command_handler(http_command, host, path):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((host, PORT))
-        request = http_command + " " + path + " HTTP/1.1\r\nHost: " + host + "\r\n"
+        request = http_command + " " + path + " HTTP/1.1\r\n"
+        request += "Host: " + host + "\r\n"
+        request += "Connection: Keep-Alive\r\n"
         if http_command == "HEAD" or http_command == "GET":
             request += "\r\n"
         if http_command == "PUT" or http_command == "POST":
@@ -34,6 +40,7 @@ def command_handler(http_command, host, path):
             request += "Content-Length: " + str(len(data_to_send)) + "\r\n"
             request += "\r\n"
             request += data_to_send
+        print(request)
         s.send(bytes(request, 'UTF-8'))
         response_handler(http_command, host, s)
         s.close()
@@ -46,60 +53,59 @@ def command_handler(http_command, host, path):
 
 
 def response_handler(http_command, host, s):
-    initial_line, headers, all_data = HTTP_Utils.read_head(s)
+    initial_line, headers, header_data = HTTP_Utils.read_head(s)
     if http_command == "GET":
-        # first_part_of_data = s.recv(1024)
-        # check if end of header is found (CRLF)
-        print(all_data)
-        print(len(all_data))
+        print(header_data)
+        print(len(header_data))
         print(headers)
-        # is_chunked, content_length = extract_metadata(all_data)
-        # print(int(content_length))
-        # dummy = send_request("GET", host, path, is_chunked, int(content_length))
-
+        chunked = headers.get("transfer-encoding")
         if headers.get("transfer-encoding") == "chunked":
-            next_chunk_size = HTTP_Utils.determine_chunk_size(s)
-            receive_4k_chunk_times = next_chunk_size // 4096
-            remaining_size = next_chunk_size % 4096
-            chunk_data = ""
-            print("next chunk size: ", next_chunk_size)
-            print(str(receive_4k_chunk_times) + ", " + str(remaining_size))
-            for _ in range(receive_4k_chunk_times):
-                data = s.recv(4096).decode()
-                print(data)
-                print(len(data))
-                print("====================")
-                chunk_data += data
-            data = s.recv(remaining_size).decode()
-            print(data)
-            print(len(data))
-            print("====================")
-            chunk_data += data
-            print(len(chunk_data))
-            all_data += chunk_data
-            data = s.recv(4096).decode()
-            print("++++++++++++++++++++++++++++")
-            print(data)
-            print(len(data))
-            print("====================")
-            chunk_data += data
+            content_length = 0
         else:
-            # print(first_part_of_data[:determine_header_length(first_part_of_data)])
-            # remaining_content_length = int(content_length) - (len(first_part_of_data) - determine_header_length(first_part_of_data))
-            # print(remaining_content_length)
             content_length = int(headers.get("content-length"))
-            print(content_length)
-            data = s.recv(int(content_length)).decode()
-            print(data)
-            print(len(data))
-            all_data += data
+        html_data, error = HTTP_Utils.read_body(s, content_length, chunked)
+        # write received html data to file
         f = open(REQUESTED_PAGES_FOLDER + host + ".html", "w")
-        f.write(all_data)
+        f.write(html_data)
         f.close()
-    print(all_data)
-    print(len(all_data))
+        # search for and retrieve images
+        retrieve_images(s, host, html_data)
+        
+
+    # print(header_data)
+    # print(len(header_data))
+    # if html_data:
+    #     print(html_data)
+    #     print(len(html_data))
     print(http_command + " request returned with status code: ", *initial_line.split(" ")[1:])
     # return all_data
+
+
+def retrieve_images(s, host, html_data):
+    soup = BeautifulSoup(html_data, 'html.parser')
+    print(soup.find_all("img"))
+    for image in soup.find_all("img"):
+        img_source = image['src']
+        if img_source[0] != "/":
+            img_source = "/" + img_source
+        image_request = "GET " + img_source + " HTTP/1.1\r\n"
+        image_request += "Host: " + host + "\r\n"
+        image_request += "Connection: Keep-Alive\r\n"
+        print(image_request)
+        s.send(bytes(image_request, 'UTF-8'))
+        image_data = b""
+        image_size = 0
+        while True:
+            try:
+                data = s.recv(1024)
+                if not data:
+                    break
+                image_size = image_size + len(data)
+                print(len(data), image_size)
+                image_data += data
+            except KeyboardInterrupt:
+                break
+        print(img_source, image_data)
 
 """
 determine header length

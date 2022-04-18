@@ -62,10 +62,11 @@ def determine_chunk_size(c):
             print(e)
             break
         req += data_chunk.decode()
+        # print(bytes(req, "utf-8"))
         if req[-2:] == "\r\n":
             chunk_size = req[:-2]
-            # print(chunk_size)
-            reading_chunk_size = False
+            if not chunk_size == "":
+                reading_chunk_size = False
     return int(chunk_size, 16)
 
 
@@ -82,7 +83,27 @@ def read_body(c, content_length=0, chunked=False):
     """
     body = b""
     err = "ok"
-    if not chunked:
+    if chunked:
+        receiving_response = True
+        while receiving_response:
+            chunk_size = determine_chunk_size(c)
+            if chunk_size != 0:
+                chunk_data = b""
+                # print("chunk size: ", chunk_size)
+                remaining_data_size = chunk_size
+                while remaining_data_size > 0:
+                    data = c.recv(remaining_data_size)
+                    chunk_data += data
+                    remaining_data_size = chunk_size - len(chunk_data)
+                    # print(data)
+                    # print("received data size: ", len(data))
+                    # print("====================")
+                    # print("remaining data size: ", remaining_data_size)
+                body += chunk_data
+                # print("++++++++++++++++++++++++++++++++")
+            else:
+                receiving_response = False
+    else:
         # receive body
         while len(body) < content_length:
             try:
@@ -97,11 +118,8 @@ def read_body(c, content_length=0, chunked=False):
         if not len(body) == content_length:
             print("READ BODY ERROR: body size does not equal content-length!")
             err = "bad content_length"
-    else:
-        print("READ BODY ERROR: chunked unimplemented")
-        err = "chunked unimplemented"
 
-    return body.decode(), err
+    return body.decode(encoding="ISO-8859-1"), err
 
 
 def parse_uri(uri, host=None, port=80):
