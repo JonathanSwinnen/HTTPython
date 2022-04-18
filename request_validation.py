@@ -46,7 +46,7 @@ def validate_head(initial_line, headers):
         close = True
 
     # respond 404 (except for put and post, which will create new files when file does not exist)
-    if (method == "GET" or method == "HEAD") and not os.path.isfile(path):
+    if (method == "GET" or method == "HEAD") and not (os.path.isfile(path) or os.path.isdir(path)):
         err.append((404, "The resource was not found"))
 
     # respond to invalid method

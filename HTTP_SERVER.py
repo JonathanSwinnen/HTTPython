@@ -86,10 +86,23 @@ def retrieve(path, headers, include_body):
     add_headers["Content-Type"] = mimetypes.guess_type(path)[0] or 'text/html'
     lm = datetime.fromtimestamp(os.path.getmtime(path), tz=timezone.utc).strftime(DATE_FORMAT)
     add_headers["Last-Modified"] = lm
-    # read file
-    fin = open(path, "rb")
-    content = fin.read()
-    fin.close()
+    content = b""
+    if os.path.isfile(path):
+        # read file
+        fin = open(path, "rb")
+        content = fin.read()
+        fin.close()
+    else:  # path is directory, generate contents page
+        if path[-1] != "/":
+            path += "/"
+        web_path = path[len(WEB_ROOT):]
+        content = "<h1>Contents of: " + web_path + "</h1><ul>"
+        for entry in os.listdir(path):
+            content += "<li><a href='" + web_path + entry + "'>" + entry
+            if os.path.isdir(path+entry):
+                content += "/"
+            content += "</a></li>"
+        content += "</ul>"
     # check If-Modified-Since header and respond accordingly
     ims = headers.get("if-modified-since")
     if ims is not None:
@@ -219,8 +232,6 @@ def generate_response(code, body=None, additional_headers=dict(), include_body=T
             resp_str += "<<response body: (" + str(len(body)) + " bytes)>>\n"
 
     return response, resp_str
-
-
 
 
 def main():
