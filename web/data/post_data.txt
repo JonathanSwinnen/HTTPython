@@ -1,2 +1,3 @@
-Hello world!
+Cleared by testsuiteAppend test
 num=100&str=HALLO
+num=103&str=HALLO2

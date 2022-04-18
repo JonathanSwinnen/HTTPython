@@ -2,108 +2,68 @@
 import mimetypes
 import os
 from datetime import datetime
-from HTTP_Utils import *
+from HTTP_utils import *
 import traceback
 from datetime import timezone
 from _thread import *
-
-# Constants:
-PORT = 8000
-TIMEOUT = 120
-DATE_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
-HOME_PAGE = "index.html"
-WEB_ROOT = "web"
-
-# Debug options
-LOG_BODY = False
-THREADING = True
+from request_validation import validate_head
+from server_settings import *
 
 
 # thread function
 def handle_connection(c):
-    print("\n--- CONNECTION: STARTED THREAD ---")
+    print("--- CONNECTION: STARTED THREAD ---")
 
     # initialize close flag
     close = False
-
-    while True:  # persistent connection: keep looping
+    # persistent connection: keep looping
+    while True:
+        print("\n WAITING FOR NEW REQUEST")
 
         # empty method & headers
         method = ""
         headers = dict()
-
         try:
             # read head
-            initial_line, headers, total, err = read_head(c)
-            if err != "ok":
-                print("-- read_head error: " + err)
+            initial_line, headers, total, rh_err = read_head(c)
+            if rh_err != "ok":
+                print("\n-- read_head error: " + rh_err)
                 break
             print("\n-- Got request head: \n" + total)
-
-            command = initial_line.split(" ")
-            # get method
-            method = command[0]
-            # get path
-            uri = command[1]
-            parsed_uri = parse_uri(uri, getmyip(), PORT)
-            path = parsed_uri.path
-            if path[0] != "/":
-                path = "/"+path
-            if path == "/":
-                path += HOME_PAGE
-            path = WEB_ROOT + path
 
             # initialize response
             response = b""
             resp_str = ""
 
-            # respond to bad uri
-            if parsed_uri.err != "ok":
-                response, resp_str, close = generate_response(
-                    "400 Bad Request",
-                    "<h1>ERROR 400 - BAD REQUEST</h1><p>Bad URI: +"+parsed_uri.err+"</p>",
-                    close=True
-                )
-
-            # respond to bad host header
-            elif not(headers.get("host") == getmyip()+":"+str(PORT)
-                     or (PORT == 80 and headers.get("host") == getmyip())):
-                response, resp_str, close = generate_response(
-                    "400 Bad Request",
-                    "<h1>ERROR 400 - BAD REQUEST</h1><p>Incorrect or missing host header!</p>",
-                    close=True
-                )
-
+            # validate the received head
+            method, path, err, ignored = validate_head(initial_line, headers)
+            if len(ignored) != 0:
+                print("ignored errors: " + str(ignored))
+            if len(err) != 0:
+                response, resp_str, close = report_error(err, ignored, method != "HEAD")
             # respond to 500 internal server error test
             elif headers.get("crashtest"):  # custom header just to test throwing an internal server error
                 crash(headers.get("crashtest"))
-
             # respond to GET and HEAD requests
             elif method == "GET" or method == "HEAD":
-                response, resp_str,  close = retrieve(path, headers, method == "GET")
-
+                response, resp_str = retrieve(path, headers, method == "GET")
             # respond to POST and PUT requests
             elif method == "POST" or method == "PUT":
-                response, resp_str,  close = store(path, headers, c, method == "PUT")
+                response, resp_str, close, err = store(path, headers, c, method == "PUT")
+                if err == "timeout" or err == "connection reset":
+                    break
 
-            # respond to invalid method
-            else:
-                response, resp_str,  close = generate_response(
-                    "400 Bad Request",
-                    "<h1>ERROR 400 - BAD REQUEST</h1><p>The requested HTTP is invalid or not not implemented</p>",
-                    close=True
-                )
         # internal server error catch
         except Exception as e:
             print("\n-- Internal server error!!" + str(e.args) + " ending thread...")
-            response, resp_str,  close = generate_response(
+            response, resp_str = generate_response(
                 "500 Internal Server Error",
                 "<h1>ERROR 500 - Internal Server Error</h1><p>An unexpected exception occurred: "
                 + str(e) + "</p><h4>Traceback:</h4><p>"+traceback.format_exc()+"</p>",
                 include_body=(method != "HEAD"),
                 close=True
             )
-
+            close = True
         # send response
         try:
             c.sendall(response)
@@ -121,38 +81,33 @@ def handle_connection(c):
 
 # handles HEAD and GET requests
 def retrieve(path, headers, include_body):
-    # respond 404
-    if not os.path.isfile(path):
-        print("not found!")
-        return generate_response(
-            "404 Not Found",
-            "<h1>ERROR 404 - NOT FOUND</h1><p>Sorry, this file does not exist on our server :(</p>",
-            include_body=include_body
-        )
     # add required headers for GET and HEAD requests
     add_headers = dict()
     add_headers["Content-Type"] = mimetypes.guess_type(path)[0] or 'text/html'
     lm = datetime.fromtimestamp(os.path.getmtime(path), tz=timezone.utc).strftime(DATE_FORMAT)
     add_headers["Last-Modified"] = lm
-    # read file
-    fin = open(path, "rb")
-    content = fin.read()
-    fin.close()
-
+    content = b""
+    if os.path.isfile(path):
+        # read file
+        fin = open(path, "rb")
+        content = fin.read()
+        fin.close()
+    else:  # path is directory, generate contents page
+        if path[-1] != "/":
+            path += "/"
+        web_path = path[len(WEB_ROOT):]
+        content = "<h1>Contents of: " + web_path + "</h1><ul>"
+        for entry in os.listdir(path):
+            content += "<li><a href='" + web_path + entry + "'>" + entry
+            if os.path.isdir(path+entry):
+                content += "/"
+            content += "</a></li>"
+        content += "</ul>"
     # check If-Modified-Since header and respond accordingly
     ims = headers.get("if-modified-since")
     if ims is not None:
-        try:
-            ims_dat = datetime.strptime(ims, DATE_FORMAT)
-        except ValueError:  # bad date format
-            return generate_response(
-                "400 Bad Request",
-                "<h1>ERROR 400 - BAD REQUEST</h1><p>If-Modified-Since field bad format!</p>",
-                include_body=include_body,
-                close=True
-            )
         # not modified, respond 304
-        if ims_dat >= datetime.strptime(lm, DATE_FORMAT):
+        if datetime.strptime(ims, DATE_FORMAT) >= datetime.strptime(lm, DATE_FORMAT):
             return generate_response(
                 "304 Not Modified",
                 content,
@@ -167,44 +122,60 @@ def retrieve(path, headers, include_body):
 def store(path, headers, c, overwrite):
     cl = int(headers.get("content-length"))
     chunked = False
-
-    # no length & not chunked, bad request
-    if cl is None and not chunked:
-        print("no content-length or chunked given!")
+    # read body
+    body, err = read_body(c, cl, chunked)
+    print(err)
+    # incorrect content length, bad request
+    if err == "bad content_length":
         return generate_response(
             "400 Bad Request",
-            "<h1>ERROR 400 - BAD REQUEST</h1><p>No Content-Length field or chunked encoding was specified!</p>"
-        )
+            "<h1>ERROR 400 - BAD REQUEST</h1><p>Inconsistent Content-Length!</p>",
+            close=True
+        ), + (True, err,)
+    elif err == "timeout" or err == "connection reset":
+        return b"", "", True, err
     else:
-        # read body
-        body, err = read_body(c, cl, chunked)
-        print(err)
-        # incorrect content length, bad request
-        if err == "bad content_length":
-            return generate_response(
-                "400 Bad Request",
-                "<h1>ERROR 400 - BAD REQUEST</h1><p>Inconsistent Content-Length!</p>",
-                close=True
-            )
-        else:
-            # for safety, writing outside data folder is forbidden
-            if not path.startswith("web/data/"):
-                return generate_response(
-                    "403 Forbidden",
-                    "<h1>ERROR 403 - FORBIDDEN</h1><p>Please only use PUT & POST commands to resources under /data/</p>",
-                    close=True
-                )
-            if not overwrite:  # POST
-                with open(path, "a") as f:
-                    f.write(body + "\n")
-            else:  # PUT
-                with open(path, "w+") as f:
-                    f.write(body)
-            # respond
-            return generate_response(
-                "201 Created",
-                "<h1>201 - Created</h1><p>Data submitted successfully!</p>"
-            )
+        if not overwrite:  # POST
+            with open(path, "a") as f:
+                f.write(body + "\n")
+        else:  # PUT
+            with open(path, "w+") as f:
+                f.write(body)
+        # respond
+        return generate_response(
+            "201 Created",
+            "<h1>201 - Created</h1><p>Data submitted successfully!</p>"
+        ) + (False, err,)
+
+
+def report_error(err, ignored, include_body):
+    codes = [e[1] for e in err]
+    close_codes = [400, 411, 500, 505]
+    # automatically close connection on bad/unsupported requests and internal server errors
+    close = len([c for c in codes if c in close_codes]) != 0
+    sorted_err = sorted(err)
+    highest_err = sorted(err)[-1]
+    err_msg = "<h1>ERROR " + str(highest_err[0]) + " - " + status_msg(highest_err[0]).upper() + "</h1>" + \
+              "<p>" + highest_err[1] + "</p>"
+    if len(err) > 1:
+        err_msg += "<h3>Other potential errors have been detected:</h3>"
+        for e in sorted_err[-2::-1]:
+            err_msg += "<h5>" + str(e[0]) + ": " + status_msg(e[0]).upper() + "</h5>" + \
+                       "<p>" + e[1] + "</p>"
+    if len(ignored) > 0:
+        err_msg += "<h3>The following errors are ignored because strict validation is disabled:</h3><ul>"
+        for e in ignored:
+            err_msg += "<li>" + e + "</li>"
+        err_msg += "</ul>"
+
+    response, resp_str = generate_response(
+        str(highest_err[0]) + " " + status_msg(highest_err[0]),
+        err_msg,
+        close=close,
+        include_body=include_body
+    )
+
+    return response, resp_str, close
 
 
 # 500 internal error test
@@ -260,16 +231,7 @@ def generate_response(code, body=None, additional_headers=dict(), include_body=T
         else:
             resp_str += "<<response body: (" + str(len(body)) + " bytes)>>\n"
 
-    return response, resp_str, close
-
-
-# gets server ip
-def getmyip():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(("8.8.8.8", 80))
-    ip = s.getsockname()[0]
-    s.close()
-    return ip
+    return response, resp_str
 
 
 def main():
@@ -288,7 +250,7 @@ def main():
             # establish connection with client
             c, a = s.accept()
             c.settimeout(TIMEOUT)
-            print('Connected to :', a[0], ':', a[1])
+            print('\n-------\nConnected to :', a[0], ':', a[1])
             # Start a new thread and return its identifier
             if THREADING:
                 start_new_thread(handle_connection, (c,))

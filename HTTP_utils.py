@@ -22,10 +22,9 @@ def read_head(c):
         except socket.timeout:
             error = "timeout"
             break
-        except Exception as e:
-            print(str(e))
-            print(type(e))
-            raise e
+        except ConnectionResetError:
+            error = "connection reset"
+            break
         req += data_chunk.decode()
         # print(req)
         total += data_chunk.decode()
@@ -111,10 +110,8 @@ def read_body(c, content_length=0, chunked=False):
             except socket.timeout:
                 err = "timeout"
                 break
-            except Exception as e:
-                print(str(e))
-                print(type(e))
-                raise e
+            except ConnectionResetError:
+                err = "connection reset"
         if not len(body) == content_length:
             print("READ BODY ERROR: body size does not equal content-length!")
             err = "bad content_length"
@@ -126,7 +123,8 @@ def parse_uri(uri, host=None, port=80):
     """
     This function parses a given uri
     :param uri: (string) the uri that should be parsed
-    :param host: (string) optional. if the hostname is known, specify it to improve accuracy
+    :param host: (string) optional. if the hostname is known, specify it to improve accuracy.
+        If not provided, the parser will guess.
     :param port: (int) optional. default=80. if the hostname is specified, but the port is not 80, change it
     :return: an object with the following properties:
         obj.scheme (string)
@@ -173,3 +171,24 @@ def parse_uri(uri, host=None, port=80):
         ret.query = split_query[1]
     return ret
 
+# gets server ip
+def getmyip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    ip = s.getsockname()[0]
+    s.close()
+    return ip
+
+
+def status_msg(code):
+    if code == 200: return "OK"
+    if code == 201: return "Created"
+    if code == 304: return "Not Modified"
+    if code == 400: return "Bad Request"
+    if code == 404: return "Not Found"
+    if code == 405: return "Method Not Allowed"
+    if code == 411: return "Length Required"
+    if code == 500: return "Internal Server Error"
+    if code == 501: return "Not Implemented"
+    if code == 505: return "Version Not Supported"
+    return "ERROR CODE NOT RECOGNIZED"
