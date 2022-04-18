@@ -2,7 +2,7 @@
 PORT = 8000
 TIMEOUT = 120
 DATE_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
-HOME_PAGE = ""
+HOME_PAGE = "index.html"
 WEB_ROOT = "web"
 
 # Debug options
