@@ -137,11 +137,17 @@ def parse_uri(uri, host=None, port=80):
 # gets server ip
 def getmyip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(("8.8.8.8", 80))
-    ip = s.getsockname()[0]
+    ip = ""
+    try:
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+    except OSError as e:
+        if e.args[0] == 51:  # if not connected to network, use localhost
+            ip = "127.0.0.1"
+        else:
+            raise e
     s.close()
     return ip
-
 
 def status_msg(code):
     if code == 200: return "OK"

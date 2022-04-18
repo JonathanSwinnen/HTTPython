@@ -5,7 +5,7 @@ import HTTP_SERVER
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.connect((HTTP_SERVER.getmyip(), HTTP_SERVER.PORT))
     s.sendall(
-        b"""GET / HTTP/1.1\r\nHost: 192.168.2.20:8000\r\n\r\n"""
+        b"""GET / HTTP/1.1\r\nHost: linux-ip.net\r\n\r\n"""
     )
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.connect((HTTP_SERVER.getmyip(), HTTP_SERVER.PORT))

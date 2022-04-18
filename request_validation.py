@@ -63,8 +63,7 @@ def validate_headers(headers, method):
     ignored = []
 
     # respond to bad host header, cannot be ignored
-    if not (headers.get("host") == getmyip() + ":" + str(PORT)
-            or (PORT == 80 and headers.get("host") == getmyip())):
+    if not check_host(headers.get("host")):
         err.append((400, "Bad host header"))
 
     # content-length header
@@ -106,3 +105,32 @@ def check_date_format(date):
     except ValueError:  # bad date format
         return False
     return True
+
+
+def check_host(host):
+    # exact match ip:port
+    if host == getmyip() + ":" + str(PORT):
+        return True
+
+    # split host into (ip,port)
+    host_port = host.split(":", 1)
+
+    if len(host_port) == 1:  # if no port, default is 80
+        if PORT != 80:
+            return False
+    else:  # port is specified
+        if str(PORT) != host_port[1]:  # port doesn't match
+            return False
+
+    # check localhost
+    if (host_port[0] == "localhost" and getmyip() == "127.0.0.1") \
+            or (host_port[0] == "127.0.0.1" and getmyip() == "localhost"):
+        return True
+
+    # ip match
+    if host_port[0] == getmyip():
+        return True
+
+    # port matches but ip doesn't
+    return False
+
