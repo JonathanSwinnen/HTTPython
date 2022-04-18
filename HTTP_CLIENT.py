@@ -1,5 +1,5 @@
 import socket
-import HTTP_Utils
+import HTTP_utils
 PORT = 8000
 ALLOWED_COMMANDS = ["HEAD", "GET", "PUT", "POST"]
 REQUESTED_PAGES_FOLDER = "requested_pages/"
@@ -46,7 +46,7 @@ def command_handler(http_command, host, path):
 
 
 def response_handler(http_command, host, s):
-    initial_line, headers, all_data = HTTP_Utils.read_head(s)
+    initial_line, headers, all_data = HTTP_utils.read_head(s)
     if http_command == "GET":
         # first_part_of_data = s.recv(1024)
         # check if end of header is found (CRLF)

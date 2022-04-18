@@ -1,8 +1,7 @@
-from HTTP_Utils import *
+from HTTP_utils import *
 from datetime import datetime
 import os
-
-from Settings import *
+from server_settings import *
 
 
 def validate_head(initial_line, headers):

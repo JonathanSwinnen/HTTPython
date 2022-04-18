@@ -2,12 +2,12 @@
 import mimetypes
 import os
 from datetime import datetime
-from HTTP_Utils import *
+from HTTP_utils import *
 import traceback
 from datetime import timezone
 from _thread import *
-from HTTP_Validation import validate_head
-from Settings import *
+from request_validation import validate_head
+from server_settings import *
 
 
 # thread function
