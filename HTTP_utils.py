@@ -46,7 +46,7 @@ def read_head(c):
                     headers[header_line[0].lower()] = header_line[1].strip()
                 else:  # CRLF after headers --> end request or body
                     reading_head = False
-    return initial_line, headers, total
+    return initial_line, headers, total, error
 
 
 def determine_chunk_size(c):

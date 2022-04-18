@@ -53,7 +53,7 @@ def command_handler(http_command, host, path):
 
 
 def response_handler(http_command, host, s):
-    initial_line, headers, header_data = HTTP_utils.read_head(s)
+    initial_line, headers, header_data, _ = HTTP_utils.read_head(s)
     if http_command == "GET":
         print(header_data)
         print(len(header_data))
@@ -90,7 +90,7 @@ def retrieve_images(s, host, html_data):
             img_source = "/" + img_source
         image_request = "GET " + img_source + " HTTP/1.1\r\n"
         image_request += "Host: " + host + "\r\n"
-        image_request += "Connection: Keep-Alive\r\n"
+        image_request += "Connection: Keep-Alive\r\n\r\n"
         print(image_request)
         s.send(bytes(image_request, 'UTF-8'))
         image_data = b""
