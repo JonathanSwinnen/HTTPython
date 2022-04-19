@@ -54,7 +54,7 @@ The server can execute `PUT` and `POST` requests to write to files contained in 
 setting in `server_settings.py`. A `PUT` request will overwrite the file, a `POST` will append its contents to the end of the file on a new line. \
 Writing to a resource that is not contained in the allowed directories results in a `405 Method Not Allowed` response. This is demonstrated on 
 the webpage `/web/errors/post_error.html`. This limitation was to ensure we didn't accidentally overwrite our homepage while testing, 
-an can be turned off by just setting `ALLOW_WRITE = ("/",)`. \
+an can be turned off by just setting `ALLOW_WRITE = ("/",)` in `server_settings.py`. \
 `PUT` and `POST` requests can't be used on directories, only on files. If a `PUT` or `POST` request is used on a file that does not exist,
 it will be created if possible.\
 \
