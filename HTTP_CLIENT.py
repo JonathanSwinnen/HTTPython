@@ -3,8 +3,8 @@ import HTTP_utils
 from bs4 import BeautifulSoup
 # import sys
 # print(sys.version)
-ALLOWED_COMMANDS = ["HEAD", "GET", "PUT", "POST", "TEST"]
-REQUESTED_PAGES_FOLDER = "requested_pages/"
+ALLOWED_COMMANDS = ["HEAD", "GET", "PUT", "POST"]
+REQUESTED_PAGES_FOLDER = "web/imported_pages"
 
 def input_handler():
     user_input = input("HTTP request: ").split(" ")
