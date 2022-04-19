@@ -8,42 +8,19 @@ from datetime import timezone
 from _thread import *
 from request_validation import validate_head
 import server_settings
-from server_settings import *
 import sys
 
 
 # server entry point
 def main(args):
     print("\nStarting server... args: "+str(args))
-    # load default settings
-    server_settings.init()
-    # interpret command line arguments
-    try:
-        if "-p" in args:
-            server_settings.PORT = int(args[args.index("-p")+1])
-        if "-t" in args:
-            server_settings.TIMEOUT = int(args[args.index("-t")+1])
-        if "-h" in args:
-            server_settings.HOME_PAGE = args[args.index("-h")+1]
-        if "-r" in args:
-            server_settings.WEB_ROOT = args[args.index("-r")+1]
-        if "--log-body" in args:
-            server_settings.LOG_BODY = True
-        if "--no-threading" in args:
-            server_settings.THREADING = False
-        if "--strict" in args:
-            server_settings.STRICT_VALIDATION = True
-        if "--localhost" not in args:
-            server_settings.IP = getmyip()
+    try:  # load settings
+        init_settings(args)
     except Exception as e:
         print("Failed startup: Invalid args: " + str(e) + "\n")
         return
-    if server_settings.IP == "127.0.0.1":
-        print("running on localhost")
-    else:
-        server_settings.ACCEPTED_HOSTNAMES = [server_settings.IP]
 
-    # TCP socket
+    # start TCP socket
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     # When the server is shut down, the address can be reused.
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -84,6 +61,31 @@ def main(args):
         print("\nClosing socket")
         s.close()
         print("Server stopped\n")
+
+
+def init_settings(args):
+    server_settings.init()
+    # interpret command line arguments
+    if "-p" in args:  # -p <port>
+        server_settings.PORT = int(args[args.index("-p")+1])
+    if "-t" in args:  # -t <timeout>
+        server_settings.TIMEOUT = int(args[args.index("-t")+1])
+    if "-h" in args:  # -h <homepage>
+        server_settings.HOME_PAGE = args[args.index("-h")+1]
+    if "-r" in args:  # -r <webroot>
+        server_settings.WEB_ROOT = args[args.index("-r")+1]
+    if "--log-body" in args:  # --log-body -> set true
+        server_settings.LOG_BODY = True
+    if "--no-threading" in args:  # --no-threading  -> set false
+        server_settings.THREADING = False
+    if "--strict" in args:  # --strict -> set true
+        server_settings.STRICT_VALIDATION = True
+    if "--localhost" not in args:  # --localhost -> force 127.0.0.1
+        server_settings.IP = getmyip()
+    if server_settings.IP == "127.0.0.1":
+        print("running on localhost")
+    else:
+        server_settings.ACCEPTED_HOSTNAMES = [server_settings.IP]
 
 
 # thread entry point

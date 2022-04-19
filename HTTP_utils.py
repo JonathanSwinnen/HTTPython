@@ -1,6 +1,7 @@
 import socket
 
 
+# reads head from socket
 def read_head(c):
     """
     This function reads data from a socket and interprets it as an HTTP request + headers.
@@ -69,6 +70,7 @@ def determine_chunk_size(c):
     return int(chunk_size, 16)
 
 
+# reads body data from socket
 def read_body(c, headers):
     """
     This function reads data from a socket and interprets it as the body of a http request.
@@ -116,6 +118,7 @@ def read_body(c, headers):
     return body.decode(encoding="ISO-8859-1"), err
 
 
+# parses uri and returns object with uri components
 def parse_uri(uri, host=None, port=80):
     """
     This function parses a given uri
@@ -168,6 +171,7 @@ def parse_uri(uri, host=None, port=80):
         ret.query = split_query[1]
     return ret
 
+
 # gets server ip
 def getmyip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -183,6 +187,8 @@ def getmyip():
     s.close()
     return ip
 
+
+# returns status message for given status code integer
 def status_msg(code):
     if code == 200: return "OK"
     if code == 201: return "Created"
