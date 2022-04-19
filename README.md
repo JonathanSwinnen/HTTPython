@@ -52,12 +52,12 @@ when the requested resource was not modified since the given date.\
 \
 The server can execute `PUT` and `POST` requests to write to files contained in the directories specified in the `ALLOW_WRITE` 
 setting in `server_settings.py`. This limitation was to ensure we didn't accidentally overwrite our homepage while testing, an can be turned off
-by just setting `ALLOW_WRITE = ("/",)`. Writing to a resource that is not contained in the allowed directories results in a `405 Method Not Allowed` 
+by just setting `ALLOW_WRITE = ("/",)`. `PUT` requests will overwrite the file, `POST` requests will append their contents to the end file on a new line.\ Writing to a resource that is not contained in the allowed directories results in a `405 Method Not Allowed` 
 response. This is demonstrated on the webpage `/web/errors/post_error.html`. `PUT` and `POST` requests can't be used on directories, only on files. If a `PUT` or `POST` request is used on a file that does not exist,
 it will be created if possible.\
 \
 The server will validate incoming requests and reject it when it is deemed invalid. In such a case, the server will respond with `400 Bad Request`.
-Other error codes that the server can occasionaly throw, which were not required for the project assignment, but seemed usefull anyways 
+Other error codes that the server can occasionaly throw, which were not required for the project assignment, but seemed useful anyways 
 (for example for debugging), are `405 Method Not Allowed` for invalid methods, `411 Length Required` for missing content lengths, and `501 Not Implemented`
 for unimplemented functionality. We also added `505 Version Not Supported` when the request HTTP version is not 1.1. \
 \
