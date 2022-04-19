@@ -51,10 +51,11 @@ Resources that are not found will properly return a `404 Not Found` status code 
 when the requested resource was not modified since the given date.\
 \
 The server can execute `PUT` and `POST` requests to write to files contained in the directories specified in the `ALLOW_WRITE` 
-setting in `server_settings.py`. This limitation was to ensure we didn't accidentally overwrite our homepage while testing, an can be turned off
-by just setting `ALLOW_WRITE = ("/",)`. A `PUT` request will overwrite the file, a `POST` will append its contents to the end of the file on a new line. \
-Writing to a resource that is not contained in the allowed directories results in a `405 Method Not Allowed` 
-response. This is demonstrated on the webpage `/web/errors/post_error.html`. `PUT` and `POST` requests can't be used on directories, only on files. If a `PUT` or `POST` request is used on a file that does not exist,
+setting in `server_settings.py`. A `PUT` request will overwrite the file, a `POST` will append its contents to the end of the file on a new line. \
+Writing to a resource that is not contained in the allowed directories results in a `405 Method Not Allowed` response. This is demonstrated on 
+the webpage `/web/errors/post_error.html`. This limitation was to ensure we didn't accidentally overwrite our homepage while testing, 
+an can be turned off by just setting `ALLOW_WRITE = ("/",)`. \
+`PUT` and `POST` requests can't be used on directories, only on files. If a `PUT` or `POST` request is used on a file that does not exist,
 it will be created if possible.\
 \
 The server will validate incoming requests and reject it when it is deemed invalid. In such a case, the server will respond with `400 Bad Request`.
