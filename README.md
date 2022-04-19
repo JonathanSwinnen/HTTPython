@@ -22,7 +22,7 @@ To start the client, run `HTTP_CLIENT.py`
 ### Server
 
 #### Starting the server
-To start the browser, run `HTTP_SERVER.py`. The server will start with the default settings found in `server_settings.py`.
+To start the server, run `HTTP_SERVER.py`. The server will start with the default settings found in `server_settings.py`.
 The default port is 8000 instead of 80, since using port 80 requires admin privileges, which is less convenient for testing.
 \
 You can also run the server from the command line to start with different settings. Any of the following arguments can be set:
@@ -43,9 +43,12 @@ When the server starts, it prints its IP address and port. You can use this addr
 the server will run on the localhost ip `127.0.0.1`. 
 
 #### Functionality
-The server can serve valid `GET` and `HEAD` requests for any existing resource under the website root. Resources that are not found will properly
-return a `404 Not Found` status code along with an automatically generated error message webpage. When a `GET` or `HEAD` request is sent for a directory
-path, the server will generate a simple page listing the contents of the directory.\
+The server can serve valid `GET` and `HEAD` requests for any existing resource under the website root. 
+You can also visit the webpages using a standard web browser.\
+When a `GET` or `HEAD` request is sent for a directory path, the server will generate a simple page listing the contents of the directory. \
+Resources that are not found will properly return a `404 Not Found` status code along with an automatically generated error message webpage. 
+`GET` and `HEAD` requests also support the `If-Modified-Since` header and return a `304 Not Modified` response without a body
+when the requested resource was not modified since the given date.\
 \
 The server can execute `PUT` and `POST` requests to write to files contained in the directories specified in the `ALLOW_WRITE` 
 setting in `server_settings.py`. This limitation was to ensure we didn't accidentally overwrite our homepage while testing, an can be turned off
