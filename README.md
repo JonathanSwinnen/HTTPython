@@ -16,7 +16,7 @@ This project implements a simple HTTP 1.1 server and client.
 ### Client
 
 To start the client, run `HTTP_CLIENT.py`
-...  <-- TODO: Andres leg jij hier nog even heel basic uit hoe de client werkt?
+...  <-- TODO: Andres leg jij hier nog even heel basic uit hoe de client werkt? Het moet niet even veel zijn als voor de server hoor. Gewoon kort wat er moet ingetypt worden en waar de gedownloade files kunnen teruggevonden worden.
 
 
 ### Server
@@ -30,7 +30,7 @@ You can also run the server from the command line to start with different settin
 ```
 python HTTP_SERVER.py -p <PORT> -t <TIMEOUT> -h <HOME_PAGE> -r <WEB_ROOT> --log-body --no-threading --strict --localhost
 ```
-- `-p` : Sets the server port. Default 8000. To use low numbered ports, you need might to run the command using `sudo`
+- `-p` : Sets the server port. Default 8000. To use low numbered ports, you might need to run the command using `sudo`
 - `-t` : Sets the connection timeout time. Default 30
 - `-h` : Sets the website home page. Default `index.html`
 - `-r` : Sets the website root directory. Default `web`
