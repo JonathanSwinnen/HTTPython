@@ -17,6 +17,8 @@ def input_handler():
     host = parsed_uri.host
     port = parsed_uri.port
     path = parsed_uri.path
+    if parsed_uri.query != "":
+        path += "?"+parsed_uri.query
 
     print(http_command, uri)
     print(http_command, host, path)

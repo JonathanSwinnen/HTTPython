@@ -3,17 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <title>Hello World!</title>
+    <style>
+        * {
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        body {
+            margin: 0;
+        }
+        h1 {
+            text-align: center;
+            font-size: 5em;
+            margin: 0;
+            padding: 1em;
+        }
+        #headImg {
+            margin: auto;
+            width: 50%;
+            display: block;
+            padding: 10px;
+        }
+        header {
+            margin: 0;
+            background: Gainsboro;
+            padding:1em
+        }
+        div#links {
+            margin: 0;
+            padding:3em;
+            background: #2F4F4F;
+            color: white;
+        }
+        div#links a {
+            color: #00BFFF
+
+        }
+        article {
+            padding: 4em
+        }
+    </style>
 </head>
 <body>
-    <h1>Welcome to our webserver</h1>
-    <img width="50%" height="50%" src="img/http.jpeg" alt="http">
-    <h4>See downloaded pages by client program</h4>
-    <a href="imported_pages">-> click me <-</a>
-    <h4>TEST: POST request using a html form!</h4>
-    <a href="post.html">-> click me <-</a>
-    <h4>TEST: errors</h4>
-    <a href="errors/errors.html">-> click me <-</a>
-    <br><br>
+    <header>
+        <h1>Welcome to our webserver</h1>
+        <img width="40%" height="50%" src="img/http.jpeg" alt="http" id="headImg">
+    </header>
+    <div id="links">
+        <h2>Important links: </h2>
+        <h4>See downloaded pages by client program</h4>
+        <a href="imported_pages">-> click me <-</a>
+        <h4>TEST: POST request using a html form!</h4>
+        <a href="post.html">-> click me <-</a>
+        <h4>TEST: errors</h4>
+        <a href="errors/errors.html">-> click me <-</a>
+    </div>
+    <article>
+            <img width="30%" style="float:right;margin:3em" src="http://cs4.pikabu.ru/post_img/2014/12/23/1/1419288732_1740266244.jpg" alt="http">
+    <h2>Hello World</h2>
     <p>
         Lorem ipsum dolor sit amet, consectetur adipiscing elit,
         sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
@@ -28,6 +73,7 @@
         In metus vulputate eu scelerisque. Vivamus arcu felis bibendum ut tristique et egestas quis ipsum.
         Phasellus egestas tellus rutrum tellus. Mattis molestie a iaculis at. Nibh sit amet commodo nulla facilisi.
     </p>
+
     <p>Sapien faucibus et molestie ac feugiat sed lectus. Vestibulum mattis ullamcorper velit sed.
         At tellus at urna condimentum mattis pellentesque id. Vestibulum morbi blandit cursus risus at ultrices mi.
         Ut lectus arcu bibendum at varius vel pharetra vel. Quis risus sed vulputate odio ut enim.
@@ -63,5 +109,6 @@
         Amet tellus cras adipiscing enim eu turpis egestas pretium aenean.
         Curabitur vitae nunc sed velit dignissim sodales ut eu.
     </p>
+    </article>
 </body>
 </html>

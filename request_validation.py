@@ -1,3 +1,5 @@
+""" this file contains the functions used to validate HTTP Request and generate appropriate error codes/messages """
+
 from HTTP_utils import *
 from datetime import datetime
 import os

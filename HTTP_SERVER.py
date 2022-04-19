@@ -1,4 +1,3 @@
-# import socket programming library
 import mimetypes
 import os
 from datetime import datetime
@@ -8,6 +7,7 @@ from datetime import timezone
 from _thread import *
 from request_validation import validate_head
 import server_settings
+from server_settings import DATE_FORMAT
 import sys
 
 
@@ -198,42 +198,49 @@ def retrieve(path, headers, include_body):
 def store(path, headers, body, overwrite):
     err = "ok"
     directory = os.path.dirname(path)
+    # if path doesn't exist, create it
     if not os.path.exists(directory) or os.path.isfile(directory):
-        os.makedirs(directory)
+        os.makedirs(directory)  # <--- edge case here can throw 500 internal server error (see readme)
 
+    # write to file
     if not overwrite:  # POST
         with open(path, "a") as f:
             f.write(body + "\n")
     else:  # PUT
         with open(path, "w+") as f:
             f.write(body)
-    # respond
+
+    # generate response
     return generate_response(
         "201 Created",
         "<h1>201 - Created</h1><p>Data submitted successfully!</p>"
     ) + (False, err,)
 
 
+# sends error responses
 def report_error(err, ignored, include_body):
-    codes = [e[1] for e in err]
-    close_codes = [400, 411, 500, 505]
+    codes = [e[1] for e in err]  # all error codes
+    close_codes = [400, 411, 500, 505]  # codes that make connection close
     # automatically close connection on bad/unsupported requests and internal server errors
     close = len([c for c in codes if c in close_codes]) != 0
+    # sort errors
     sorted_err = sorted(err)
+    # reported error is the error with the highest code (arbitrary choice)
     highest_err = sorted(err)[-1]
     err_msg = "<h1>ERROR " + str(highest_err[0]) + " - " + status_msg(highest_err[0]).upper() + "</h1>" + \
               "<p>" + highest_err[1] + "</p>"
-    if len(err) > 1:
+    if len(err) > 1:  # if more errors detected, also report them on the generated webpage
         err_msg += "<h3>Other potential errors have been detected:</h3>"
         for e in sorted_err[-2::-1]:
             err_msg += "<h5>" + str(e[0]) + ": " + status_msg(e[0]).upper() + "</h5>" + \
                        "<p>" + e[1] + "</p>"
-    if len(ignored) > 0:
+    if len(ignored) > 0:  # if there are "ignored" errors, also report them on the generated webpage
         err_msg += "<h3>The following errors are ignored because strict validation is disabled:</h3><ul>"
         for e in ignored:
             err_msg += "<li>" + e + "</li>"
         err_msg += "</ul>"
 
+    # generate response
     response, resp_str = generate_response(
         str(highest_err[0]) + " " + status_msg(highest_err[0]),
         err_msg,
@@ -255,6 +262,7 @@ def generate_response(code, body=None, additional_headers=dict(), include_body=T
     # body string (for logging purposes)
     body_str = str(body)
 
+    # there is a body available, set content length
     if body is not None:
         # add content-length
         resp_str += "\r\nContent-Length: " + str(len(body))
@@ -263,13 +271,13 @@ def generate_response(code, body=None, additional_headers=dict(), include_body=T
             body = body.encode()
             additional_headers["Content-Type"] = "text/html"
 
-    # close connection
-    if close:
-        resp_str += "\r\nConnection: close"
-
     # additional parameter specified headers
     for header in additional_headers:
         resp_str += "\r\n" + header + ": " + additional_headers[header]
+
+    # close connection if necessary
+    if close:
+        resp_str += "\r\nConnection: close"
 
     # end double CRLF
     resp_str += "\r\n\r\n"
@@ -292,7 +300,7 @@ def generate_response(code, body=None, additional_headers=dict(), include_body=T
 def generate_dirpage(path):
     if path[-1] != "/":
         path += "/"
-    web_path = path[len(server_settings.WEB_ROOT):]
+    web_path = path[len(server_settings.WEB_ROOT):]  # path relative to the web root
     content = "<h1>Contents of: " + web_path + "</h1><ul>"
     for entry in os.listdir(path):
         content += "<li><a href='" + web_path + entry + "'>" + entry

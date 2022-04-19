@@ -1,3 +1,4 @@
+"""This file contains some useful functions that are needed in both the client and the server"""
 import socket
 
 
@@ -147,7 +148,6 @@ def parse_uri(uri, host=None, port=80):
             ret.scheme = split_scheme[0]
             if ret.scheme != "http":
                 ret.err = "bad scheme"
-                return ret
         no_scheme = split_scheme[-1]  # host/path?query
         split_domain = no_scheme.split("/", 1)
         if host is not None and \
@@ -165,10 +165,13 @@ def parse_uri(uri, host=None, port=80):
         else:
             # interpret as absolute file path but without leading /
             stripped_uri = no_scheme
+    # extract uri queries (google.com/search?q=value --> query: q=value
     split_query = stripped_uri.split("?", 1)
     ret.path = "/" + split_query[0]
     if len(split_query) == 2:
         ret.query = split_query[1]
+    while "//" in ret.path:
+        ret.path = ret.path.replace("//", "/")  # remove unnecessary double slashes
     return ret
 
 
