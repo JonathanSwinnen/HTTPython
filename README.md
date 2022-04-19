@@ -62,7 +62,7 @@ Other error codes that the server can occasionaly throw, which were not required
 (for example for debugging), are `405 Method Not Allowed` for invalid methods, `411 Length Required` for missing content lengths, and `501 Not Implemented`
 for unimplemented functionality. We also added `505 Version Not Supported` when the request HTTP version is not 1.1. \
 \
-We intentionally left an edge case in our code uncaught, which will result in an Exception. This happens when a `PUT` or `POST` request tries to create
+We intentionally left an edge case in our code, which will result in an Exception. This happens when a `PUT` or `POST` request tries to create
 a file in a folder that does not yet exist, but has the same name as a file that does exist. (for example, the file `/data/test` exists and a `PUT` request
 tries to create the file `/data/test/file`). This causes an exception, which will be caught by a main unknown exception handler resulting in a `500 Internal Server Error`.
 A variant of this problem is demonstrated on the page `/web/errors/post_edgecase.html`.
