@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head></head>
+<body>
+    <h3>400</h3>
+    <p>
+        Bad requests won't happen inside a browser. Please test them using telnet or our custom client.
+    </p>
+    <h3>404</h3>
+    <a href="this_page_does_not_exist.html">a page that does not exist</a><br><br>
+    <h3>405</h3>
+    <a href="post_error.html">a form that tries to write to an unsupported resource</a><br><br>
+    <h3>500</h3>
+    <p>
+        <a href="post_edgecase.html">edge case in the code</a> when a POST or PUT request wants to create a file in a folder which doesn't exist yet,
+        with the folder name equal to the name of a file that does already exist.
+        <br><br> <b>For example:</b> the file /error_data/edgecase exists. A POST request is called to the file
+        /error_data/edgecase/does_not_exist_yet.txt . The server will try to create the file, but it can't create the
+        folder 'edgecase' because there already exists a file with the same name. <br><br>
+        (this error can be caught, but we do not do this on purpose to show off what happens when an exception is thrown in the server code).
+    </p>
+</body>
+</html>

@@ -1,3 +1,4 @@
 Cleared by testsuiteAppend test
 num=100&str=HALLO
 num=103&str=HALLO2
+num=1&str=test

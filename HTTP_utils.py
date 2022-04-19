@@ -69,17 +69,18 @@ def determine_chunk_size(c):
     return int(chunk_size, 16)
 
 
-def read_body(c, content_length=0, chunked=False):
+def read_body(c, headers):
     """
     This function reads data from a socket and interprets it as the body of a http request.
 
     :param c: (socket) the socket to read from
-    :param content_length: (int) content length specified in the content-length header. default 0. if chunked=True,
-        this value is ignored.
-    :param chunked: (bool) content-encoding is chunked
+    :param headers: (dict) the request headers
     :return: a tuple containing a string representing the decoded body, and an error message
         (at this time, only string bodies are implemented)
     """
+    content_length = int(headers.get("content-length", 0))
+    chunked = headers.get("transfer-encoding") == "chunked"
+
     body = b""
     err = "ok"
     if chunked:
@@ -106,16 +107,12 @@ def read_body(c, content_length=0, chunked=False):
         # receive body
         while len(body) < content_length:
             try:
-                body += c.recv(content_length)
+                body += c.recv(content_length-len(body))
             except socket.timeout:
                 err = "timeout"
                 break
             except ConnectionResetError:
                 err = "connection reset"
-        if not len(body) == content_length:
-            print("READ BODY ERROR: body size does not equal content-length!")
-            err = "bad content_length"
-
     return body.decode(encoding="ISO-8859-1"), err
 
 
@@ -156,9 +153,9 @@ def parse_uri(uri, host=None, port=80):
             stripped_uri = (split_domain[1]) if 1 < len(split_domain) else ""
         elif host is None:  # assume first entry is the domain
             host_port = split_domain[0].split(":")
-            host = host_port[0]
+            ret.host = host_port[0]
             if len(host_port) == 2:
-                ret.port = host_port[1]
+                ret.port = int(host_port[1])
             else:
                 ret.port = 80
             stripped_uri = (split_domain[1]) if 1 < len(split_domain) else ""

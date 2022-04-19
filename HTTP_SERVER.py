@@ -7,17 +7,93 @@ import traceback
 from datetime import timezone
 from _thread import *
 from request_validation import validate_head
+import server_settings
 from server_settings import *
+import sys
 
 
-# thread function
+# server entry point
+def main(args):
+    print("\nStarting server... args: "+str(args))
+    # load default settings
+    server_settings.init()
+    # interpret command line arguments
+    try:
+        if "-p" in args:
+            server_settings.PORT = int(args[args.index("-p")+1])
+        if "-t" in args:
+            server_settings.TIMEOUT = int(args[args.index("-t")+1])
+        if "-h" in args:
+            server_settings.HOME_PAGE = args[args.index("-h")+1]
+        if "-r" in args:
+            server_settings.WEB_ROOT = args[args.index("-r")+1]
+        if "--log-body" in args:
+            server_settings.LOG_BODY = True
+        if "--no-threading" in args:
+            server_settings.THREADING = False
+        if "--strict" in args:
+            server_settings.STRICT_VALIDATION = True
+        if "--localhost" not in args:
+            server_settings.IP = getmyip()
+    except Exception as e:
+        print("Failed startup: Invalid args: " + str(e) + "\n")
+        return
+    if server_settings.IP == "127.0.0.1":
+        print("running on localhost")
+    else:
+        server_settings.ACCEPTED_HOSTNAMES = [server_settings.IP]
+
+    # TCP socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # When the server is shut down, the address can be reused.
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:  # try to bind
+        s.bind((server_settings.IP, server_settings.PORT))
+    except PermissionError:
+        print("Failed startup: Permission denied. Admin privileges are required to use this port\n")
+        return
+    except OSError as e:
+        if e.args[0] == 48:  # errno 48 = address already in use
+            print("Failed startup: Address/port already in use\n")
+            return
+        else:  # something else happened ?
+            raise e
+    except Exception as e:
+        raise e
+
+    print("Socket bound @ " + server_settings.IP + ":"+str(server_settings.PORT))
+    # put the socket into listening mode
+    s.listen()
+    print("Socket is listening.")
+
+    # a forever loop until client wants to exit
+    try:
+        while True:
+            # establish connection with client
+            c, a = s.accept()
+            # set client timeout setting for this connection
+            c.settimeout(server_settings.TIMEOUT)
+            print('\n-------\nAccepted incoming connection :', a[0], ':', a[1])
+            # Start a new thread and return its identifier
+            if server_settings.THREADING:  # handle connection via new thread
+                start_new_thread(handle_connection, (c,))
+            else:  # threading can be turned off for debugging purposes
+                handle_connection(c)
+    except KeyboardInterrupt:
+        # stop server after keyboard interrupt (stop button in pycharm, CTRL+C in terminal, ...)
+        print("\nClosing socket")
+        s.close()
+        print("Server stopped\n")
+
+
+# thread entry point
 def handle_connection(c):
     print("--- CONNECTION: STARTED THREAD ---")
 
-    # initialize close flag
+    # close connection flag
     close = False
-    # persistent connection: keep looping
-    while True:
+    # persistent connection: keep looping until connection closes
+    while not close:
         print("\n WAITING FOR NEW REQUEST")
 
         # empty method & headers
@@ -26,37 +102,44 @@ def handle_connection(c):
         try:
             # read head
             initial_line, headers, total, rh_err = read_head(c)
-            if rh_err != "ok":
+            if rh_err != "ok":  # problems reading head  (usually a timeout)
                 print("\n-- read_head error: " + rh_err)
-                break
+                break  # can't continue without head, break and close
             print("\n-- Got request head: \n" + total)
 
             # initialize response
             response = b""
             resp_str = ""
 
-            # validate the received head
+            # validate the received head and retrieve the method & path
             method, path, err, ignored = validate_head(initial_line, headers)
-            if len(ignored) != 0:
+
+            if len(ignored) != 0:  # some errors can be ignored when server_settings.STRICT_VALIDATION = False
                 print("ignored errors: " + str(ignored))
-            if len(err) != 0:
-                response, resp_str, close = report_error(err, ignored, method != "HEAD")
-            # respond to 500 internal server error test
-            elif headers.get("crashtest"):  # custom header just to test throwing an internal server error
-                crash(headers.get("crashtest"))
+            if len(err) != 0:  # Errors have been detected
+                response, resp_str, close = report_error(err, ignored, method != "HEAD")  # send error response
+                if not close:  # read body if connection will not close, so it isn't mixed in with the next request
+                    _, rb_err = read_body(c, headers)
+                    if rb_err != "ok":  # timeout during read body?
+                        print("\n-- read_body error: " + rh_err)
+                        break  # end connection
+
             # respond to GET and HEAD requests
             elif method == "GET" or method == "HEAD":
                 response, resp_str = retrieve(path, headers, method == "GET")
             # respond to POST and PUT requests
             elif method == "POST" or method == "PUT":
-                response, resp_str, close, err = store(path, headers, c, method == "PUT")
-                if err == "timeout" or err == "connection reset":
-                    break
+                body, rb_err = read_body(c, headers)
+                if rb_err != "ok":  # timeout during read body?
+                    print("\n-- read_body error: " + rh_err)
+                    break  # end connection
+                # store resource and generate response
+                response, resp_str, close, err = store(path, headers, body, method == "PUT")
 
         # internal server error catch
         except Exception as e:
             print("\n-- Internal server error!!" + str(e.args) + " ending thread...")
-            response, resp_str = generate_response(
+            response, resp_str = generate_response(  # generate internal server error response page
                 "500 Internal Server Error",
                 "<h1>ERROR 500 - Internal Server Error</h1><p>An unexpected exception occurred: "
                 + str(e) + "</p><h4>Traceback:</h4><p>"+traceback.format_exc()+"</p>",
@@ -64,22 +147,22 @@ def handle_connection(c):
                 close=True
             )
             close = True
-        # send response
         try:
-            c.sendall(response)
+            c.sendall(response)  # send response
             print("\n-- Sent response:\n" + resp_str)
-            if close or headers.get("connection") == "close":
-                break
+            close = close or (headers.get("connection") == "close")  # check for connection: close header
+        # send failed due to disconnect or timeout: close connection
         except socket.timeout:  # timeout
             print("\n-- sendall: timeout, ending thread\n")
+            close = True
         except BrokenPipeError:  # broken pipe
             print("\n-- sendall: broken pipe, ending thread\n")
-            break
+            close = True
     c.close()
     print("\n--- CONNECTION CLOSED ---")
 
 
-# handles HEAD and GET requests
+# retrieves data / handles HEAD and GET requests
 def retrieve(path, headers, include_body):
     # add required headers for GET and HEAD requests
     add_headers = dict()
@@ -93,16 +176,7 @@ def retrieve(path, headers, include_body):
         content = fin.read()
         fin.close()
     else:  # path is directory, generate contents page
-        if path[-1] != "/":
-            path += "/"
-        web_path = path[len(WEB_ROOT):]
-        content = "<h1>Contents of: " + web_path + "</h1><ul>"
-        for entry in os.listdir(path):
-            content += "<li><a href='" + web_path + entry + "'>" + entry
-            if os.path.isdir(path+entry):
-                content += "/"
-            content += "</a></li>"
-        content += "</ul>"
+        content = generate_dirpage(path)
     # check If-Modified-Since header and respond accordingly
     ims = headers.get("if-modified-since")
     if ims is not None:
@@ -119,33 +193,23 @@ def retrieve(path, headers, include_body):
 
 
 # handles PUT and POST requests
-def store(path, headers, c, overwrite):
-    cl = int(headers.get("content-length"))
-    chunked = False
-    # read body
-    body, err = read_body(c, cl, chunked)
-    print(err)
-    # incorrect content length, bad request
-    if err == "bad content_length":
-        return generate_response(
-            "400 Bad Request",
-            "<h1>ERROR 400 - BAD REQUEST</h1><p>Inconsistent Content-Length!</p>",
-            close=True
-        ), + (True, err,)
-    elif err == "timeout" or err == "connection reset":
-        return b"", "", True, err
-    else:
-        if not overwrite:  # POST
-            with open(path, "a") as f:
-                f.write(body + "\n")
-        else:  # PUT
-            with open(path, "w+") as f:
-                f.write(body)
-        # respond
-        return generate_response(
-            "201 Created",
-            "<h1>201 - Created</h1><p>Data submitted successfully!</p>"
-        ) + (False, err,)
+def store(path, headers, body, overwrite):
+    err = "ok"
+    directory = os.path.dirname(path)
+    if not os.path.exists(directory) or os.path.isfile(directory):
+        os.makedirs(directory)
+
+    if not overwrite:  # POST
+        with open(path, "a") as f:
+            f.write(body + "\n")
+    else:  # PUT
+        with open(path, "w+") as f:
+            f.write(body)
+    # respond
+    return generate_response(
+        "201 Created",
+        "<h1>201 - Created</h1><p>Data submitted successfully!</p>"
+    ) + (False, err,)
 
 
 def report_error(err, ignored, include_body):
@@ -176,18 +240,6 @@ def report_error(err, ignored, include_body):
     )
 
     return response, resp_str, close
-
-
-# 500 internal error test
-def crash(test):
-    print("-- Internal Server Error test: ")
-    if test == "div-by-zero":
-        a = 0 / 0
-    elif test == "index-oob":
-        a = [1, 2, 3]
-        b = a[100]
-    elif test == "custom":
-        raise Exception("custom exception")
 
 
 # generates response bytes
@@ -226,7 +278,7 @@ def generate_response(code, body=None, additional_headers=dict(), include_body=T
     # include body in response (false for HEAD requests and 304 responses)
     if include_body and body is not None:
         response += body
-        if LOG_BODY:  # for logging purposes
+        if server_settings.LOG_BODY:  # for logging purposes
             resp_str += body_str
         else:
             resp_str += "<<response body: (" + str(len(body)) + " bytes)>>\n"
@@ -234,34 +286,23 @@ def generate_response(code, body=None, additional_headers=dict(), include_body=T
     return response, resp_str
 
 
-def main():
-    host = getmyip()
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    s.bind((host, PORT))
-    print("socket bound @ " + host + ":"+str(PORT))
-    # put the socket into listening mode
-    s.listen()
-    print("socket is listening")
-
-    # a forever loop until client wants to exit
-    try:
-        while True:
-            # establish connection with client
-            c, a = s.accept()
-            c.settimeout(TIMEOUT)
-            print('\n-------\nConnected to :', a[0], ':', a[1])
-            # Start a new thread and return its identifier
-            if THREADING:
-                start_new_thread(handle_connection, (c,))
-            else:
-                handle_connection(c)
-        s.close()
-    except KeyboardInterrupt:
-        pass
+# generates a directory index html page
+def generate_dirpage(path):
+    if path[-1] != "/":
+        path += "/"
+    web_path = path[len(server_settings.WEB_ROOT):]
+    content = "<h1>Contents of: " + web_path + "</h1><ul>"
+    for entry in os.listdir(path):
+        content += "<li><a href='" + web_path + entry + "'>" + entry
+        if os.path.isdir(path + entry):
+            content += "/"
+        content += "</a></li>"
+    content += "</ul>"
+    return content
 
 
+# startup server with command line args
 if __name__ == '__main__':
-    main()
+    main(sys.argv)
 
 

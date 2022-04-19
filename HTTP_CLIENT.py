@@ -3,67 +3,61 @@ import HTTP_utils
 from bs4 import BeautifulSoup
 # import sys
 # print(sys.version)
-PORT = 80
-ALLOWED_COMMANDS = ["HEAD", "GET", "PUT", "POST"]
+ALLOWED_COMMANDS = ["HEAD", "GET", "PUT", "POST", "TEST"]
 REQUESTED_PAGES_FOLDER = "requested_pages/"
 
 def input_handler():
     user_input = input("HTTP request: ").split(" ")
-    http_command, URI = user_input[0], user_input[1]
+    http_command, uri = user_input[0], user_input[1]
     if http_command not in ALLOWED_COMMANDS:
         print("Not an allowed command, allowed commands are: ", *ALLOWED_COMMANDS)
         return
-    if len(user_input) > 2:
-        port = user_input[2]
-    # parsed_URI = HTTP_Utils.parse_uri(URI)
-    stripped_URI = URI.split("/", 3)
-    #print(stripped_URI, len(stripped_URI))
-    host = stripped_URI[2]
-    path = "/"
-    if len(stripped_URI) >= 4:
-        path += stripped_URI[3]
-    print(http_command, URI)
+
+    parsed_uri = HTTP_utils.parse_uri(uri)
+    host = parsed_uri.host
+    port = parsed_uri.port
+    path = parsed_uri.path
+
+    print(http_command, uri)
     print(http_command, host, path)
-    command_handler(http_command, host, path)
+    command_handler(http_command, host, port, path)
 
 
-def command_handler(http_command, host, path):
+def command_handler(http_command, host, port, path):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.connect((host, PORT))
+        s.connect((host, port))
         request = http_command + " " + path + " HTTP/1.1\r\n"
-        request += "Host: " + host + "\r\n"
+
+        request += "Host: " + host
+        if port != 80:
+            request += ":" + port
+        request += "\r\n"
+
         request += "Connection: Keep-Alive\r\n"
         if http_command == "HEAD" or http_command == "GET":
-            request += "\r\n"
+            pass
         if http_command == "PUT" or http_command == "POST":
             data_to_send = input("Data to send: ")
             request += "Content-Length: " + str(len(data_to_send)) + "\r\n"
-            request += "\r\n"
             request += data_to_send
+        request += "\r\n"
         print(request)
         s.send(bytes(request, 'UTF-8'))
         response_handler(http_command, host, s)
         s.close()
 
 
-
 # def send_request(request, s):
 #     print(request)
-        
 
 
 def response_handler(http_command, host, s):
     initial_line, headers, header_data, _ = HTTP_utils.read_head(s)
-    if http_command == "GET":
+    if http_command == "GET" or http_command == "TEST":
         print(header_data)
         print(len(header_data))
         print(headers)
-        chunked = headers.get("transfer-encoding")
-        if headers.get("transfer-encoding") == "chunked":
-            content_length = 0
-        else:
-            content_length = int(headers.get("content-length"))
-        html_data, error = HTTP_utils.read_body(s, content_length, chunked)
+        html_data, error = HTTP_utils.read_body(s, headers)
         # write received html data to file
         f = open(REQUESTED_PAGES_FOLDER + host + ".html", "w")
         f.write(html_data)

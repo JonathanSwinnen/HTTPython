@@ -1,7 +1,7 @@
 from HTTP_utils import *
 from datetime import datetime
 import os
-from server_settings import *
+import server_settings
 
 
 def validate_head(initial_line, headers):
@@ -18,20 +18,20 @@ def validate_head(initial_line, headers):
     http_v = command[2].split("/", 1)
     # get path
     uri = command[1]
-    parsed_uri = parse_uri(uri, getmyip(), PORT)
+    parsed_uri = parse_uri(uri, server_settings.IP, server_settings.PORT)
     path = parsed_uri.path
     if path[0] != "/":
         path = "/" + path
     if path == "/":
-        path += HOME_PAGE
-    path = WEB_ROOT + path
+        path += server_settings.HOME_PAGE
+    path = server_settings.WEB_ROOT + path
     # validate individual headers:
     err_h, ignored = validate_headers(headers, method)
     err += err_h
 
     # respond to bad uri
     if parsed_uri.err == "bad scheme":
-        if STRICT_VALIDATION:  # We have seen other servers ignore the scheme and act like it's always http
+        if server_settings.STRICT_VALIDATION:  # We have seen other servers ignore the scheme and act like it's always http
             err.append((400, "Bad URI: scheme. Only http:// allowed"))
             close = True
 
@@ -52,9 +52,12 @@ def validate_head(initial_line, headers):
     # respond to invalid method
     if not (method == "GET" or method == "HEAD" or method == "PUT" or method == "POST"):
         err.append((405, "The requested method is not supported on this server."))
-    elif (method == "POST" or method == "PUT") and not path.startswith("web/data"):
-        err.append((405, "PUT and POST requests are only supported for resources under /data/"))
-
+    elif (method == "POST" or method == "PUT") and not \
+            any([path.startswith(server_settings.WEB_ROOT + write_dir) for write_dir in server_settings.ALLOW_WRITE]):
+        err.append((405, "PUT and POST requests are only allowed for resources under the following directories: "
+                    + str(server_settings.ALLOW_WRITE)[1:][-2::-1][::-1]))
+    elif (method == "POST" or method == "PUT") and (os.path.isdir(path) or path[-1] == "/"):
+        err.append((405, "POST and PUT requests are not supported on directories"))
     return method, path, err, ignored
 
 
@@ -69,11 +72,11 @@ def validate_headers(headers, method):
     # content-length header
     if headers.get("content-length") is not None:
         if method == "GET" or method == "HEAD":
-            if STRICT_VALIDATION:
+            if server_settings.STRICT_VALIDATION:
                 err.append((400, "No content-length should be present for GET or HEAD requests"))
         if headers.get("transfer-encoding") is not None:
             msg = "Both transfer-encoding and content-length present"
-            if STRICT_VALIDATION:
+            if server_settings.STRICT_VALIDATION:
                 err.append((400, msg))
             else:
                 ignored.append(msg)
@@ -90,7 +93,7 @@ def validate_headers(headers, method):
 
     # if-modified-since date format
     if headers.get("if-modified-since") is not None and not check_date_format(headers.get("if-modified-since")):
-        if STRICT_VALIDATION:
+        if server_settings.STRICT_VALIDATION:
             err.append((400, "If-Modified-Since: bad date format"))
         else:
             ignored.append = "If-Modified-Since: bad date format"
@@ -108,29 +111,13 @@ def check_date_format(date):
 
 
 def check_host(host):
-    # exact match ip:port
-    if host == getmyip() + ":" + str(PORT):
-        return True
-
-    # split host into (ip,port)
-    host_port = host.split(":", 1)
-
-    if len(host_port) == 1:  # if no port, default is 80
-        if PORT != 80:
-            return False
-    else:  # port is specified
-        if str(PORT) != host_port[1]:  # port doesn't match
-            return False
-
-    # check localhost
-    if (host_port[0] == "localhost" and getmyip() == "127.0.0.1") \
-            or (host_port[0] == "127.0.0.1" and getmyip() == "localhost"):
-        return True
-
-    # ip match
-    if host_port[0] == getmyip():
-        return True
-
-    # port matches but ip doesn't
-    return False
-
+    parsed_host = parse_uri(host)
+    if parsed_host.scheme != "":  # there isn't supposed to be a scheme in the hostname
+        return False
+    if parsed_host.path != "/" or host[-1] == "/":  # there isn't supposed to be a path in the hostname
+        return False
+    if parsed_host.port != server_settings.PORT:  # port has to match
+        return False
+    if parsed_host.host not in server_settings.ACCEPTED_HOSTNAMES:
+        return False
+    return True
