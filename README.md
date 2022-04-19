@@ -36,7 +36,7 @@ python HTTP_SERVER.py -p <PORT> -t <TIMEOUT> -h <HOME_PAGE> -r <WEB_ROOT> --log-
 - `-r` : Sets the website root directory. Default `web`
 - `--log-body` : Log response bodies. Can be useful for debugging.
 - `--no-threading` : Turn off threading. Can be useful for debugging.
-- `--strict` : Turns on some header validations that might be too strict. These are things we weren't 100% sure about and observed some other servers reject and others don't.
+- `--strict` : Turns on a few header validations that might be too strict. These are things we weren't 100% sure about and observed some servers reject and others don't.
 - `--localhost` : Force the server to run on `localhost` / `127.0.0.1`
 
 When the server starts, it prints its IP address and port. You can use this address to send HTTP requests to. When you are not connected to a network, 
