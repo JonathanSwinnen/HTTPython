@@ -82,20 +82,24 @@ def validate_headers(headers, method):
         if method == "GET" or method == "HEAD":
             if server_settings.STRICT_VALIDATION:  # only allow content-length on put and post
                 err.append((400, "No content-length should be present for GET or HEAD requests"))
-        if headers.get("transfer-encoding") is not None:  # content-length and transfer-encoding shouldn't both be present
+        # content-length and transfer-encoding shouldn't both be present
+        if headers.get("transfer-encoding") is not None:
             msg = "Both transfer-encoding and content-length present"
             if server_settings.STRICT_VALIDATION:
                 err.append((400, msg))
             else:
                 ignored.append(msg)
                 del headers["content-length"]  # override
+        # content length not an integer or negative
         elif not headers.get("content-length").isdigit() or int(headers.get("content-length")) < 0:
             err.append((400, "invalid content-length"))
     else:
         # transfer-encoding
         if headers.get("transfer-encoding") is not None:
             if headers.get("transfer-encoding") != "chunked":
+                # only transfer-encoding: chunked supported, no other transfer-encodings
                 err.append((501, "Only chunked transfer encoding supported"))
+        # content-length or transfer-encoding necessary but not present
         elif method == "POST" or method == "PUT":
             err.append((411, "No content-length or chunked encoding specified"))
 
@@ -110,6 +114,7 @@ def validate_headers(headers, method):
     return err, ignored
 
 
+# validates the format of a date string
 def check_date_format(date):
     try:
         datetime.strptime(date, "%a, %d %b %Y %H:%M:%S GMT")
@@ -118,6 +123,7 @@ def check_date_format(date):
     return True
 
 
+# checks if the host header field is matching
 def check_host(host):
     parsed_host = parse_uri(host)
     if parsed_host.scheme != "":  # there isn't supposed to be a scheme in the hostname
@@ -126,6 +132,7 @@ def check_host(host):
         return False
     if parsed_host.port != server_settings.PORT:  # port has to match
         return False
-    if parsed_host.host not in server_settings.ACCEPTED_HOSTNAMES:
+    if parsed_host.host not in server_settings.ACCEPTED_HOSTNAMES:  # not an accepted hostname
         return False
+    # all checks passed
     return True

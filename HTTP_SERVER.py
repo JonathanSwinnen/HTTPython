@@ -63,9 +63,9 @@ def main(args):
         print("Server stopped\n")
 
 
+# interpret command line arguments and set global settings
 def init_settings(args):
     server_settings.init()
-    # interpret command line arguments
     if "-p" in args:  # -p <port>
         server_settings.PORT = int(args[args.index("-p")+1])
     if "-t" in args:  # -t <timeout>
@@ -103,7 +103,7 @@ def handle_connection(c):
         headers = dict()
         try:
             # read head
-            initial_line, headers, total, rh_err = read_head(c)
+            initial_line, headers, total, rh_err = read_head(c)  # read_head: see HTTP_utils.py
             if rh_err != "ok":  # problems reading head  (usually a timeout)
                 print("\n-- read_head error: " + rh_err)
                 break  # can't continue without head, break and close
@@ -114,14 +114,14 @@ def handle_connection(c):
             resp_str = ""
 
             # validate the received head and retrieve the method & path
-            method, path, err, ignored = validate_head(initial_line, headers)
+            method, path, err, ignored = validate_head(initial_line, headers)  # validate_head:see request_validation.py
 
             if len(ignored) != 0:  # some errors can be ignored when server_settings.STRICT_VALIDATION = False
                 print("ignored errors: " + str(ignored))
             if len(err) != 0:  # Errors have been detected
                 response, resp_str, close = report_error(err, ignored, method != "HEAD")  # send error response
                 if not close:  # read body if connection will not close, so it isn't mixed in with the next request
-                    _, rb_err = read_body(c, headers)
+                    _, rb_err = read_body(c, headers)  # read_body: see HTTP_utils.py
                     if rb_err != "ok":  # timeout during read body?
                         print("\n-- read_body error: " + rh_err)
                         break  # end connection
@@ -131,7 +131,7 @@ def handle_connection(c):
                 response, resp_str = retrieve(path, headers, method == "GET")
             # respond to POST and PUT requests
             elif method == "POST" or method == "PUT":
-                body, rb_err = read_body(c, headers)
+                body, rb_err = read_body(c, headers)  # read_body: see HTTP_utils.py
                 if rb_err != "ok":  # timeout during read body?
                     print("\n-- read_body error: " + rh_err)
                     break  # end connection
@@ -253,11 +253,9 @@ def report_error(err, ignored, include_body):
 
 # generates response bytes
 def generate_response(code, body=None, additional_headers=dict(), include_body=True, close=False):
-    # initial response line
-    resp_str = "HTTP/1.1 " + code
 
-    # date
-    resp_str += "\r\nDate: " + datetime.utcnow().strftime(DATE_FORMAT)
+    resp_str = "HTTP/1.1 " + code  # initial response line
+    resp_str += "\r\nDate: " + datetime.utcnow().strftime(DATE_FORMAT)   # date
 
     # body string (for logging purposes)
     body_str = str(body)
@@ -274,14 +272,12 @@ def generate_response(code, body=None, additional_headers=dict(), include_body=T
     # additional parameter specified headers
     for header in additional_headers:
         resp_str += "\r\n" + header + ": " + additional_headers[header]
-
     # close connection if necessary
     if close:
         resp_str += "\r\nConnection: close"
 
     # end double CRLF
     resp_str += "\r\n\r\n"
-
     # encode
     response = resp_str.encode()
 
