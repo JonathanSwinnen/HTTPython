@@ -4,12 +4,12 @@ This project implements a simple HTTP 1.1 server and client.
 
 ## Important files and directories:
 
- - HTTP_CLIENT.py : the client program
- - HTTP_SERVER.py : the main server program
- - request_validation.py : functions for the server to validate incoming requests
- - server_settings.py : a file where you can modify some default settings
- - HTTP_utils.py : useful functions used by both programs
- - web/ : the root directory for the website hosted by the server
+ - `HTTP_CLIENT.py` : the client program
+ - `HTTP_SERVER.py` : the main server program
+ - `request_validation.py` : functions for the server to validate incoming requests
+ - `server_settings.py` : a file where you can modify some default settings
+ - `HTTP_utils.py` : useful functions used by both programs
+ - `web/` : the root directory for the website hosted by the server
 
 ## How to use the programs:
 
