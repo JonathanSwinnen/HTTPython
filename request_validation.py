@@ -57,10 +57,9 @@ def validate_head(initial_line, headers):
     if not (method == "GET" or method == "HEAD" or method == "PUT" or method == "POST"):
         err.append((405, "The requested method is not supported on this server."))
     # safety, post and put only in allowed directories
-    elif (method == "POST" or method == "PUT") and not \
-            any([path.startswith(server_settings.WEB_ROOT + write_dir) for write_dir in server_settings.ALLOW_WRITE]):
+    elif (method == "POST" or method == "PUT") and not check_write_allowed(path):
         err.append((405, "PUT and POST requests are only allowed for resources under the following directories: "
-                    + str(server_settings.ALLOW_WRITE)[1:][-2::-1][::-1]))   # <-- this is bad lol
+                    + str(server_settings.ALLOW_WRITE)))   # <-- this is bad lol
     # post and put can only be used on files, not on folders
     elif (method == "POST" or method == "PUT") and (os.path.isdir(path) or path[-1] == "/"):
         err.append((405, "POST and PUT requests are not supported on directories"))
@@ -136,3 +135,8 @@ def check_host(host):
         return False
     # all checks passed
     return True
+
+
+# returns true if path in an ALLOW_WRITE directory
+def check_write_allowed(path):
+    return any([path.startswith(server_settings.WEB_ROOT + write_dir) for write_dir in server_settings.ALLOW_WRITE])
