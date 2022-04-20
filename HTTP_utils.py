@@ -63,7 +63,7 @@ def determine_chunk_size(c):
             print(e)
             break
         req += data_chunk.decode()
-        print(bytes(req, "utf-8"))
+        # print(bytes(req, "utf-8"))
         if req[-2:] == "\r\n":
             chunk_size = req[:-2]
             if not chunk_size == "":
