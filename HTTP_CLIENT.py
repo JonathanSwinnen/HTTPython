@@ -1,10 +1,12 @@
+import binascii
 import socket
 import HTTP_utils
 from bs4 import BeautifulSoup
-# import sys
-# print(sys.version)
+import os
+from io import BytesIO
+from PIL import Image
 ALLOWED_COMMANDS = ["HEAD", "GET", "PUT", "POST"]
-REQUESTED_PAGES_FOLDER = "web/imported_pages"
+REQUESTED_PAGES_FOLDER = "web/imported_pages/"
 
 def input_handler():
     user_input = input("HTTP request: ").split(" ")
@@ -29,43 +31,48 @@ def command_handler(http_command, host, port, path):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((host, port))
         request = http_command + " " + path + " HTTP/1.1\r\n"
-
         request += "Host: " + host
         if port != 80:
-            request += ":" + port
+            request += ":" + str(port)
         request += "\r\n"
-
         request += "Connection: Keep-Alive\r\n"
+
         if http_command == "HEAD" or http_command == "GET":
             pass
         if http_command == "PUT" or http_command == "POST":
             data_to_send = input("Data to send: ")
-            request += "Content-Length: " + str(len(data_to_send)) + "\r\n"
+            request += "Content-Length: " + str(len(data_to_send)) + "\r\n\r\n"
             request += data_to_send
         request += "\r\n"
         print(request)
         s.send(bytes(request, 'UTF-8'))
-        response_handler(http_command, host, s)
+        response_handler(http_command, host, port, s, is_html_data=True)
         s.close()
 
 
-# def send_request(request, s):
-#     print(request)
-
-
-def response_handler(http_command, host, s):
-    initial_line, headers, header_data, _ = HTTP_utils.read_head(s)
+def response_handler(http_command, host, port, s, is_html_data):
+    initial_line, headers, header_data, header_error = HTTP_utils.read_head(s)
     if http_command == "GET" or http_command == "TEST":
-        print(header_data)
-        print(len(header_data))
-        print(headers)
-        html_data, error = HTTP_utils.read_body(s, headers)
-        # write received html data to file
-        f = open(REQUESTED_PAGES_FOLDER + host + ".html", "w")
-        f.write(html_data)
-        f.close()
-        # search for and retrieve images
-        retrieve_images(s, host, html_data)
+        data, body_error = HTTP_utils.read_body(s, headers)
+        
+        if is_html_data:
+            print(header_data)
+            print(headers)
+            html_data = data.decode(encoding="ISO-8859-1")
+            # search for and retrieve images + change path of images when necessary
+            modified_html_data = retrieve_images(s, host, port, html_data)
+            # write received html data to file
+            path = REQUESTED_PAGES_FOLDER + host
+            os.makedirs(path, exist_ok=True)
+            f = open(path + "/index.html", "w+")
+            f.write(modified_html_data)
+            f.close()
+        else:
+            image_error = "ok"
+            # if the received content is not an image type, the image won;t have been retrieved successfully
+            if headers.get("content-type")[:5] != "image":
+                image_error = initial_line.split(" ")[1:]
+            return data, image_error
         
 
     # print(header_data)
@@ -77,57 +84,74 @@ def response_handler(http_command, host, s):
     # return all_data
 
 
-def retrieve_images(s, host, html_data):
+def retrieve_images(s, host, port, html_data):
     soup = BeautifulSoup(html_data, 'html.parser')
     print(soup.find_all("img"))
     for image in soup.find_all("img"):
+        print(image['src'])
         img_source = image['src']
-        if img_source[0] != "/":
-            img_source = "/" + img_source
-        image_request = "GET " + img_source + " HTTP/1.1\r\n"
-        image_request += "Host: " + host + "\r\n"
-        image_request += "Connection: Keep-Alive\r\n\r\n"
-        print(image_request)
-        s.send(bytes(image_request, 'UTF-8'))
-        image_data = b""
-        image_size = 0
-        while True:
-            try:
-                data = s.recv(1024)
-                if not data:
-                    break
-                image_size = image_size + len(data)
-                print(len(data), image_size)
-                image_data += data
-            except KeyboardInterrupt:
-                break
-        print(img_source, image_data)
+        img_source_parsed = HTTP_utils.parse_uri(image['src'])
+        img_host = img_source_parsed.host
+        img_path = img_source_parsed.path
+        img_port = img_source_parsed.port
+        print(img_host, img_path)
 
-"""
-determine header length
-"""
-def determine_header_length(first_part_of_data):
-    CLRF = b"\r\n\r\n"
-    header_end_index = first_part_of_data.find(CLRF)
-    return header_end_index + len(CLRF)
+        # check if the image needs to be retrieved from a different source
+        if img_host != host and img_host != img_source.split("/")[0] and img_host != None:
+            image_request = "GET " + img_path + " HTTP/1.1\r\n"
+            image_request += "Host: " + img_host
+            if img_port != None:
+                image_request += ":" + str(img_port)
+            image_request += "\r\n\r\n"
+            # image_request += "Connection: Keep-Alive\r\n\r\n"
+            print(image_request)
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s2:
+                s2.connect((img_host, img_port))
+                s2.send(bytes(image_request, 'UTF-8'))
+                image_data, error = response_handler("GET", img_host, port, s2, is_html_data=False)
+            print(image['src'])
+            print(img_source, image_data)
+            if error != "ok":
+                print("Retrieving image with source " + img_source + ", returned with status code: ", *error)
+            else:
+                # write received image data to file
+                path = REQUESTED_PAGES_FOLDER + host + img_path.rsplit("/",1)[0]
+                os.makedirs(path, exist_ok=True)
+                stream = BytesIO(image_data)
+                img = Image.open(stream)
+                img.save(REQUESTED_PAGES_FOLDER + host + img_path)
 
-"""
-determine if content is chunked or not
-- if chunked: return True and length of zero
-- if not chunked: return False and content length
-"""
-def extract_metadata(header):
-    chunked_string = b"Transfer-Encoding: chunked"
-    content_length_string = b"Content-Length: "
-    content_length_begin_index = header.find(content_length_string)
-    #check if content length in header -> determine content length
-    if content_length_begin_index != -1:
-        content_length_end_index =  content_length_begin_index + header[content_length_begin_index:].find(b"\r\n")
-        return False, header[content_length_begin_index+len(content_length_string):content_length_end_index]
-    #check if chunked
-    elif chunked_string in header:
-        return True, 0
+        # if not retrieve image from current host using same socket
+        else:
+            # having or not having a leading slash both create a (different) problem
+            if img_source[0] == "/":
+                # make sure the html file looks for the image in the same folder, not the root folder
+                image['src'] = img_source[1:]
+            else:
+                # make sure there is a leading slash in the path for the GET request
+                img_source = "/" + img_source
+            image_request = "GET " + img_source + " HTTP/1.1\r\n"
+            image_request += "Host: " + host
+            if port != 80:
+                image_request += ":" + str(port)
+            image_request += "\r\n"
+            image_request += "Connection: Keep-Alive\r\n\r\n"
+            print(image_request)
+            s.send(bytes(image_request, 'UTF-8'))
+            image_data, error = response_handler("GET", host, port, s, is_html_data=False)
+            print(image['src'])
+            print(img_source, image_data)
+            if error != "ok":
+                print("Retrieving image with source " + img_source + ", returned with status code: ", *error)
+            else:
+                # write received image data to file
+                path = REQUESTED_PAGES_FOLDER + host + img_source.rsplit("/",1)[0]
+                os.makedirs(path, exist_ok=True)
+                stream = BytesIO(image_data)
+                img = Image.open(stream)
+                img.save(REQUESTED_PAGES_FOLDER + host + img_source)
 
+    return soup.prettify(soup.original_encoding)
 
 
 def main():

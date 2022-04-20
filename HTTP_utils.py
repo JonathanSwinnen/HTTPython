@@ -116,7 +116,7 @@ def read_body(c, headers):
                 break
             except ConnectionResetError:
                 err = "connection reset"
-    return body.decode(encoding="ISO-8859-1"), err
+    return body, err
 
 
 # parses uri and returns object with uri components
