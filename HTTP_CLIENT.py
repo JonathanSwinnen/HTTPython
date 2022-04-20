@@ -22,7 +22,6 @@ def input_handler():
     if parsed_uri.query != "":
         path += "?"+parsed_uri.query
 
-    print(http_command, uri)
     print(http_command, host, path)
     command_handler(http_command, host, port, path)
 
@@ -57,7 +56,6 @@ def response_handler(http_command, host, port, s, is_html_data):
         
         if is_html_data:
             print(header_data)
-            print(headers)
             html_data = data.decode(encoding="ISO-8859-1")
             # search for and retrieve images + change path of images when necessary
             modified_html_data = retrieve_images(s, host, port, html_data)
@@ -73,15 +71,8 @@ def response_handler(http_command, host, port, s, is_html_data):
             if headers.get("content-type")[:5] != "image":
                 image_error = initial_line.split(" ")[1:]
             return data, image_error
-        
 
-    # print(header_data)
-    # print(len(header_data))
-    # if html_data:
-    #     print(html_data)
-    #     print(len(html_data))
     print(http_command + " request returned with status code: ", *initial_line.split(" ")[1:])
-    # return all_data
 
 
 def retrieve_images(s, host, port, html_data):

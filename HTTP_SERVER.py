@@ -204,10 +204,10 @@ def store(path, headers, body, overwrite):
 
     # write to file
     if not overwrite:  # POST
-        with open(path, "a") as f:
+        with open(path, "ab") as f:
             f.write(body + "\n")
     else:  # PUT
-        with open(path, "w+") as f:
+        with open(path, "wb+") as f:
             f.write(body)
 
     # generate response
