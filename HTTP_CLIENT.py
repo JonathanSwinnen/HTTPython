@@ -4,6 +4,7 @@ import os
 from io import BytesIO
 from bs4 import BeautifulSoup
 from PIL import Image
+
 ALLOWED_COMMANDS = ["HEAD", "GET", "PUT", "POST"]
 REQUESTED_PAGES_FOLDER = "web/imported_pages/"
 

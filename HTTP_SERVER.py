@@ -102,7 +102,7 @@ def handle_connection(c):
         try:
             # read head
             initial_line, headers, total, rh_err = read_head(c)  # read_head: see HTTP_utils.py
-            if rh_err != "ok":  # problems reading head  (usually a timeout)
+            if rh_err == "connection reset" or rh_err == "timeout":  # problems reading head  (usually a timeout)
                 print("\n-- read_head error: " + rh_err)
                 break  # can't continue without head, break and close
             print("\n-- Got request head: \n" + total)
@@ -114,6 +114,9 @@ def handle_connection(c):
 
             # validate the received head and retrieve the method & path
             method, path, err = validate_head(initial_line, headers)  # validate_head:see request_validation.py
+            # add read head error to error list if needed
+            if rh_err.startswith("bad header format"):
+                err.append((400, rh_err))
 
             if len(err) != 0:  # Errors have been detected
                 response, resp_str, close = report_error(err, method != "HEAD", path, headers)  # send error response

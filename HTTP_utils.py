@@ -45,7 +45,13 @@ def read_head(c):
             else:  # expecting headers or newline to end
                 if line != "":
                     header_line = line.split(":", 1)
-                    headers[header_line[0].lower()] = header_line[1].strip()
+                    if len(header_line) == 2:  # correct header: value format
+                        if not headers.get(header_line[0].lower()):  # header not duplicate
+                            headers[header_line[0].lower()] = header_line[1].strip()
+                        else:  # duplicate headers get combined into a comma separated list
+                            headers[header_line[0].lower()] += ", " + header_line[1].strip()
+                    else:
+                        error = "bad header format: " + line
                 else:  # CRLF after headers --> end request or body
                     reading_head = False
     return initial_line, headers, total, error

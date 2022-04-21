@@ -126,3 +126,5 @@ def check_host(host):
 def check_write_allowed(path, headers):
     # resource not in allowed directory
     return any([path.startswith(server_settings.WEB_ROOT + write_dir) for write_dir in server_settings.ALLOW_WRITE])
+
+
