@@ -119,7 +119,7 @@ def handle_connection(c):
             if len(ignored) != 0:  # some errors can be ignored when server_settings.STRICT_VALIDATION = False
                 print("ignored errors: " + str(ignored))
             if len(err) != 0:  # Errors have been detected
-                response, resp_str, close = report_error(err, ignored, method != "HEAD", path)  # send error response
+                response, resp_str, close = report_error(err, ignored, method != "HEAD", path, headers)  # send error response
                 if not close:  # read body if connection will not close, so it isn't mixed in with the next request
                     _, rb_err = read_body(c, headers)  # read_body: see HTTP_utils.py
                     if rb_err != "ok":  # timeout during read body?
@@ -218,7 +218,7 @@ def store(path, headers, body, overwrite):
 
 
 # sends error responses
-def report_error(err, ignored, include_body, path):
+def report_error(err, ignored, include_body, path, headers):
     codes = [e[1] for e in err]  # all error codes
     close_codes = [400, 411, 500, 505]  # codes that make connection close
     # automatically close connection on bad/unsupported requests and internal server errors
@@ -243,7 +243,7 @@ def report_error(err, ignored, include_body, path):
     add_headers = dict()
     if highest_err[0] == 405:  # Method Not Allowed requires an 'Allow' header
         add_headers["Allow"] = "GET, HEAD"
-        if check_write_allowed(path):
+        if check_write_allowed(path, headers):
             add_headers["Allow"] += ", PUT, POST"
 
     # generate response
