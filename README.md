@@ -8,7 +8,7 @@ This project implements a simple HTTP 1.1 server and client.
  - `HTTP_SERVER.py` : the main server program
  - `request_validation.py` : functions for the server to validate incoming requests
  - `server_settings.py` : a file where you can modify some default settings
- - `HTTP_utils.py` : useful functions used by both programs
+ - `HTTP_utils.py` : useful functions used by both the client and server programs
  - `web/` : the root directory for the website hosted by the server
 
 ## How to use the programs:
@@ -16,7 +16,10 @@ This project implements a simple HTTP 1.1 server and client.
 ### Client
 
 To start the client, run `HTTP_CLIENT.py`
-...  <-- TODO: Andres leg jij hier nog even heel basic uit hoe de client werkt? Het moet niet even veel zijn als voor de server hoor. Gewoon kort wat er moet ingetypt worden en waar de gedownloade files kunnen teruggevonden worden.
+You will be prompted to enter an HTTP request, which should be in the following format: HTTP_COMMAND URI.
+Where HTTP_COMMAND is one of four supported commands (HEAD, GET, PUT, POST) and URI should start with "http://" followed by the domain name, path and possibly a query.
+
+
 
 
 ### Server
