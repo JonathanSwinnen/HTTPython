@@ -1,6 +1,7 @@
-^^^^  Post data into this text file using the form / submit button ^^^
+PUT^^^^  Post data into this text file using the form / submit button ^^^
 Posted data will be appended below:
 
 ==========================================
+
 
 

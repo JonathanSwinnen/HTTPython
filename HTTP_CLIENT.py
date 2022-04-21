@@ -64,7 +64,7 @@ def command_handler(http_command, host, port, path):
         # convert the request string to bytes with a UTF-8 encoding and send it to the host
         s.send(bytes(request, 'UTF-8'))
         # show the final request that was sent, to the user
-        print("Sent request:\n" + request)
+        print("\nSent request:\n" + request)
         # call the response handler, which will make sure the response is received correctly and take different action depending on which HTTP command was sent
         response_handler(http_command, host, port, s, is_html_data=True)
         # once the response has been fully handled, the connection to the host can be closed
