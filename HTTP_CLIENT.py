@@ -121,16 +121,17 @@ def retrieve_images(s, host, port, html_data):
     for image in soup.find_all("img"):
         # get the source from the 'src' attribute of the 'img' tag
         img_source = image['src']
-        retrieve_image_from_source(s, host, port, image, img_source)
+        retrieve_image_from_source(s, host, port, image, img_source, 'src')
+        # check if there is also a 'lowsrc' attribute
         if image.has_attr('lowsrc'):
-            retrieve_image_from_source(s, host, port, image, image['lowsrc'])
+            retrieve_image_from_source(s, host, port, image, image['lowsrc'], 'lowsrc')
         
     # return the modified HTML after re-encoding it
     return soup.prettify(soup.original_encoding)
 
 
 # retrieve image from provided source
-def retrieve_image_from_source(s, host, port, soup_image, img_source):
+def retrieve_image_from_source(s, host, port, soup_image, img_source, src_attribute):
     # parse the image source (using the helper function parse_uri in HTTP_utils)
     img_source_parsed = HTTP_utils.parse_uri(img_source)
     img_host = img_source_parsed.host
@@ -173,26 +174,27 @@ def retrieve_image_from_source(s, host, port, soup_image, img_source):
             # save the image to the previously specified path (now with filename)
             img = Image.open(stream)
             img.save(REQUESTED_PAGES_FOLDER + host + img_path)
-            # change the 'src' attribute of the 'img' tag, so the HTML file looks in the right place for the image
+            # change the src_attribute of the 'img' tag, so the HTML file looks in the right place for the image
             #   + make sure there is no leading slash, so that the HTML file looks for the image in its own folder, not the root folder
             if img_path[0] == "/":
-                soup_image['src'] = img_path[1:]
+                soup_image[src_attribute] = img_path[1:]
             else:
-                soup_image['src'] = img_path
+                soup_image[src_attribute] = img_path
             # make sure there are no %-characters in the source path
-            soup_image['src'] = soup_image['src'].replace("%","")
+            soup_image[src_attribute] = soup_image[src_attribute].replace("%","")
 
     # if not; retrieve image from current host using same socket
     else:
         # having or not having a leading slash, both create a different problem
+        #   	+ make sure there are no %-characters in the source paths
         if img_source[0] == "/":
             # leading slash -> make sure the HTML file looks for the image in the same folder as the HTML file, not the root folder,
-            #   therefore modify the 'src' attribute of the 'img' tag, also make sure there are no %-characters in the source paths
-            soup_image['src'] = img_source[1:].replace("%","")
+            #   therefore modify the src_attribute of the 'img' tag
+            soup_image[src_attribute] = img_source[1:].replace("%","")
         else:
             # no leading slash -> make sure there is a leading slash in the path for the GET request
             img_source = "/" + img_source
-            soup_image['src'] = soup_image['src'].replace("%","")
+            soup_image[src_attribute] = soup_image[src_attribute].replace("%","")
         
         # construct the GET request for the image
         image_request = "GET " + img_source + " HTTP/1.1\r\n"
@@ -227,10 +229,17 @@ def retrieve_image_from_source(s, host, port, soup_image, img_source):
 
 # Client entry point
 def main():
+    print("\n========================================================================\n")
+    print("Welcome to this HTTP client.")
+    print("This client supports HTTP version 1.1")
+    print("The requests should be entered in the following format: HTTP_COMMAND URI")
+    print("Supported commands: HEAD, GET, PUT, POST")
+    print("\n========================================================================\n")
     try:
         # keep on running the input handler to serve new requests once the previous request has completed
         while True:
             input_handler()
+            print("\n========================================================================\n")
 
     except KeyboardInterrupt:
         pass
