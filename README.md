@@ -24,6 +24,9 @@ When you enter a PUT or POST request, the server prompts you to enter the data y
 
 For each command, the sent request constructed based on the user input is shown. Once a response from the server has been received, the status code is displayed. For a GET request the status codes for the responses on possible GET requests for embedded images are shown as well, together with the source of that image.
 
+The received HTML data from a GET request is stored in the following path: web/imported_pages/HOST/index.html
+As for the images, these are stored relative to the paht web/imported_pages/HOST. Where HOST is the domain name or IP address of the host.
+
 ### Server
 
 #### Starting the server
