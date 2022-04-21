@@ -78,8 +78,6 @@ def init_settings(args):
         server_settings.LOG_BODY = True
     if "--no-threading" in args:  # --no-threading  -> set false
         server_settings.THREADING = False
-    if "--strict" in args:  # --strict -> set true
-        server_settings.STRICT_VALIDATION = True
     if "--localhost" not in args:  # --localhost -> force 127.0.0.1
         server_settings.IP = getmyip()
     if server_settings.IP == "127.0.0.1":
@@ -114,12 +112,10 @@ def handle_connection(c):
             resp_str = ""
 
             # validate the received head and retrieve the method & path
-            method, path, err, ignored = validate_head(initial_line, headers)  # validate_head:see request_validation.py
+            method, path, err = validate_head(initial_line, headers)  # validate_head:see request_validation.py
 
-            if len(ignored) != 0:  # some errors can be ignored when server_settings.STRICT_VALIDATION = False
-                print("ignored errors: " + str(ignored))
             if len(err) != 0:  # Errors have been detected
-                response, resp_str, close = report_error(err, ignored, method != "HEAD", path, headers)  # send error response
+                response, resp_str, close = report_error(err, method != "HEAD", path, headers)  # send error response
                 if not close:  # read body if connection will not close, so it isn't mixed in with the next request
                     _, rb_err = read_body(c, headers)  # read_body: see HTTP_utils.py
                     if rb_err != "ok":  # timeout during read body?
@@ -218,7 +214,7 @@ def store(path, headers, body, overwrite):
 
 
 # sends error responses
-def report_error(err, ignored, include_body, path, headers):
+def report_error(err, include_body, path, headers):
     codes = [e[1] for e in err]  # all error codes
     close_codes = [400, 411, 500, 505]  # codes that make connection close
     # automatically close connection on bad/unsupported requests and internal server errors
@@ -234,11 +230,6 @@ def report_error(err, ignored, include_body, path, headers):
         for e in sorted_err[-2::-1]:
             err_msg += "<h5>" + str(e[0]) + ": " + status_msg(e[0]).upper() + "</h5>" + \
                        "<p>" + e[1] + "</p>"
-    if len(ignored) > 0:  # if there are "ignored" errors, also report them on the generated webpage
-        err_msg += "<h3>The following errors are ignored because strict validation is disabled:</h3><ul>"
-        for e in ignored:
-            err_msg += "<li>" + e + "</li>"
-        err_msg += "</ul>"
 
     add_headers = dict()
     if highest_err[0] == 405:  # Method Not Allowed requires an 'Allow' header
