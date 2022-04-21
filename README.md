@@ -4,7 +4,7 @@ This project implements a simple HTTP 1.1 server and client.
 
 ## Python version & Libraries
 
-This project was made in python 3.6.8, and also uses the `Pillow` and `bs4` packages.
+This project was made in python 3.6.8, and also uses the packages `Pillow` and `bs4`.
 
 ## Important files and directories:
 
