@@ -17,10 +17,12 @@ This project implements a simple HTTP 1.1 server and client.
 
 To start the client, run `HTTP_CLIENT.py`
 You will be prompted to enter an HTTP request, which should be in the following format: HTTP_COMMAND URI.
-Where HTTP_COMMAND is one of four supported commands (HEAD, GET, PUT, POST) and URI should start with "http://" followed by the domain name, path and possibly a query.
+Where HTTP_COMMAND is one of four supported commands (HEAD, GET, PUT, POST) and the URI should follow the format: http://DOMAIN_NAME[:PORT]/PATH
+The default port of 80 is used, a non-default port can be specified in the URI as shown above.
 
+When you enter a PUT or POST request, the server prompts you to enter the data you want to send to the earlier entered host.
 
-
+For each command, the sent request constructed based on the user input is shown. Once a response from the server has been received, the status code is displayed. For a GET request the status codes for the responses on possible GET requests for embedded images are shown as well, together with the source of that image.
 
 ### Server
 
