@@ -14,7 +14,7 @@ def validate_head(initial_line, headers):
     command = initial_line.split(" ", 3)
     if len(command) != 3:  # must all be present
         err.append((400, "Invalid Request-Line"))
-        return "", "", err, []
+        return "", "", err
 
     # get method
     method = command[0]
@@ -73,8 +73,6 @@ def validate_headers(headers, method):
 
     # content-length header
     if headers.get("content-length") is not None:
-        if method == "GET" or method == "HEAD":
-            err.append((400, "No content-length or message body should be present for GET or HEAD requests"))
         # content-length and transfer-encoding shouldn't both be present, transfer-encoding overrides
         if headers.get("transfer-encoding") is not None:
             del headers["content-length"]  # override
@@ -84,8 +82,6 @@ def validate_headers(headers, method):
     else:
         # transfer-encoding
         if headers.get("transfer-encoding") is not None:
-            if method == "GET" or method == "HEAD":
-                err.append((400, "No transfer-encoding or message body should be present for GET or HEAD requests"))
             if headers.get("transfer-encoding") != "chunked":
                 # only transfer-encoding: chunked supported, no other transfer-encodings
                 err.append((501, "Only chunked transfer encoding supported"))
@@ -111,6 +107,8 @@ def check_date_format(date):
 
 # checks if the host header field is matching
 def check_host(host):
+    if host is None:
+        return False
     parsed_host = parse_uri(host)
     if parsed_host.scheme != "":  # there isn't supposed to be a scheme in the hostname
         return False

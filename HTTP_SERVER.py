@@ -107,7 +107,8 @@ def handle_connection(c):
                 break  # can't continue without head, break and close
             print("\n-- Got request head: \n" + total)
 
-            # initialize response
+            # initialize some variables
+            body = b""
             response = b""
             resp_str = ""
 
@@ -116,23 +117,22 @@ def handle_connection(c):
 
             if len(err) != 0:  # Errors have been detected
                 response, resp_str, close = report_error(err, method != "HEAD", path, headers)  # send error response
-                if not close:  # read body if connection will not close, so it isn't mixed in with the next request
-                    _, rb_err = read_body(c, headers)  # read_body: see HTTP_utils.py
-                    if rb_err != "ok":  # timeout during read body?
-                        print("\n-- read_body error: " + rh_err)
-                        break  # end connection
 
-            # respond to GET and HEAD requests
-            elif method == "GET" or method == "HEAD":
-                response, resp_str = retrieve(path, headers, method == "GET")
-            # respond to POST and PUT requests
-            elif method == "POST" or method == "PUT":
+            # read body
+            if not close:  # read body if connection will not close, so it isn't mixed in with the next request
                 body, rb_err = read_body(c, headers)  # read_body: see HTTP_utils.py
                 if rb_err != "ok":  # timeout during read body?
                     print("\n-- read_body error: " + rh_err)
                     break  # end connection
-                # store resource and generate response
-                response, resp_str, close, err = store(path, headers, body, method == "PUT")
+
+            if len(err) == 0:
+                # respond to GET and HEAD requests
+                if method == "GET" or method == "HEAD":
+                    response, resp_str = retrieve(path, headers, method == "GET")
+                # respond to POST and PUT requests
+                elif method == "POST" or method == "PUT":
+                    # store resource and generate response
+                    response, resp_str, close, err = store(path, headers, body, method == "PUT")
 
         # internal server error catch
         except Exception as e:
@@ -215,7 +215,7 @@ def store(path, headers, body, overwrite):
 
 # sends error responses
 def report_error(err, include_body, path, headers):
-    codes = [e[1] for e in err]  # all error codes
+    codes = [e[0] for e in err]  # all error codes
     close_codes = [400, 411, 500, 505]  # codes that make connection close
     # automatically close connection on bad/unsupported requests and internal server errors
     close = len([c for c in codes if c in close_codes]) != 0
