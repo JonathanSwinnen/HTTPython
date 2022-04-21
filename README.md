@@ -28,7 +28,7 @@ The default port is 8000 instead of 80, since using port 80 requires admin privi
 You can also run the server from the command line to start with different settings. Any of the following arguments can be set:
 (all arguments are optional and can be left out, order does not matter)
 ```
-python HTTP_SERVER.py -p <PORT> -t <TIMEOUT> -h <HOME_PAGE> -r <WEB_ROOT> --log-body --no-threading --strict --localhost
+python HTTP_SERVER.py -p <PORT> -t <TIMEOUT> -h <HOME_PAGE> -r <WEB_ROOT> --log-body --no-threading --localhost
 ```
 - `-p` : Sets the server port. Default 8000. To use low numbered ports, you might need to run the command using `sudo`
 - `-t` : Sets the connection timeout time. Default 30
@@ -36,7 +36,6 @@ python HTTP_SERVER.py -p <PORT> -t <TIMEOUT> -h <HOME_PAGE> -r <WEB_ROOT> --log-
 - `-r` : Sets the website root directory. Default `web`
 - `--log-body` : Log response bodies. Can be useful for debugging.
 - `--no-threading` : Turn off threading. Can be useful for debugging.
-- `--strict` : Turns on a few header validations that might be too strict. These are things we weren't 100% sure about and observed some servers reject and others don't.
 - `--localhost` : Force the server to run on `localhost` / `127.0.0.1`
 
 When the server starts, it prints its IP address and port. You can use this address to send HTTP requests to. When you are not connected to a network, 

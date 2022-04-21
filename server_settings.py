@@ -31,10 +31,6 @@ def init():
     # post and put requests are allowed in web/data/ and web/errors/error_data/
     ALLOW_WRITE = ("/data/", "/errors/error_data/")
 
-    global STRICT_VALIDATION
-    # some request validation rules that might be too strict?
-    STRICT_VALIDATION = False
-
     global ACCEPTED_HOSTNAMES
     # allowed hostnames for the Host: header. default to localhost
     ACCEPTED_HOSTNAMES = ["127.0.0.1", "localhost"]
