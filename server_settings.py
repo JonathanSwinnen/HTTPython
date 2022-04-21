@@ -42,7 +42,7 @@ def init():
     # Debug options
     global LOG_BODY
     # log response bodies
-    LOG_BODY = True
+    LOG_BODY = False
 
     global THREADING
     # option to turn of threading

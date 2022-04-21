@@ -205,7 +205,7 @@ def store(path, headers, body, overwrite):
     # write to file
     if not overwrite:  # POST
         with open(path, "ab") as f:
-            f.write(body + "\n")
+            f.write(body + b"\n")
     else:  # PUT
         with open(path, "wb+") as f:
             f.write(body)

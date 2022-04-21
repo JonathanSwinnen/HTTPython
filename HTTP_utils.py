@@ -51,23 +51,29 @@ def read_head(c):
     return initial_line, headers, total, error
 
 
+# determine the chunk size of the next to be received chunk
 def determine_chunk_size(c):
     req = ""
     reading_chunk_size = True
+    # keep on reading the next character as long as the chunk size has not been found yet
     while reading_chunk_size:
-        # receive
+        # receive the next character
         try:
             data_chunk = c.recv(1)
         except c.error as e:
             # Something happened ?
             print(e)
             break
+        # decode the character and add it to the string of all received characters up until now
         req += data_chunk.decode()
-        # print(bytes(req, "utf-8"))
+        # if a CRLF is detected the chunk size has been fulle read
         if req[-2:] == "\r\n":
             chunk_size = req[:-2]
+            # if read data is not an empty string (only a CRLF was received),
+            #   stop receiving since the chunk size has been determined
             if not chunk_size == "":
                 reading_chunk_size = False
+    # convert the chunk size (encoded in hexadecimal format) to an integer
     return int(chunk_size, 16)
 
 
@@ -78,37 +84,42 @@ def read_body(c, headers):
 
     :param c: (socket) the socket to read from
     :param headers: (dict) the request headers
-    :return: a tuple containing a string representing the decoded body, and an error message
-        (at this time, only string bodies are implemented)
+    :return: a tuple containing a string representing the body in bytes, and an error message
     """
     content_length = int(headers.get("content-length", 0))
     chunked = headers.get("transfer-encoding") == "chunked"
 
     body = b""
     err = "ok"
+    # depending on chunked transfer encoding or not, the data has to be received differently
     if chunked:
+        # keep on receiving until the end of the body is reached
         receiving_response = True
         while receiving_response:
+            # determine the chunk size of the next to be received chunk
             chunk_size = determine_chunk_size(c)
+            # if the chunk size is not zero the chunk contains data, otherwise the end of the body is reached
             if chunk_size != 0:
+                # intialize the chunk data to an empty byte string and the remaining data to be received to the total chunk size
                 chunk_data = b""
-                # print("chunk size: ", chunk_size)
                 remaining_data_size = chunk_size
+                # keep on receiving until there is no remaining data to be received (the whole chunk was received)
                 while remaining_data_size > 0:
+                    # try to receive all of the remaining data and append it to the already received chunk data
                     data = c.recv(remaining_data_size)
                     chunk_data += data
+                    # determine the remaining data size
                     remaining_data_size = chunk_size - len(chunk_data)
-                    # print(data)
-                    # print("received data size: ", len(data))
-                    # print("====================")
-                    # print("remaining data size: ", remaining_data_size)
+                # add the chunk data to the rest of the body
                 body += chunk_data
-                # print("++++++++++++++++++++++++++++++++")
             else:
                 receiving_response = False
+
+    # if no chunked transfer-encoding is used, receive the data using the content-length header
     else:
-        # receive body
-        while len(body) < content_length:
+        # as long as the length of the body has not reached the full content-length keep on receiving
+        while len(body) < content_length:\
+            # try to receive the remaining data
             try:
                 body += c.recv(content_length-len(body))
             except socket.timeout:
@@ -116,6 +127,8 @@ def read_body(c, headers):
                 break
             except ConnectionResetError:
                 err = "connection reset"
+    
+    # return the body and the error, which shows if the body was received correctly or if an error occurred
     return body, err
 
 
