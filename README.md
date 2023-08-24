@@ -1,6 +1,6 @@
-# CN_HTTP
+# HTTPython
 
-This project implements a simple HTTP 1.1 server and client. We made this project to get a deeper understanding of the HTTP Protocol while we were taking a Computer Networks class at KU Leuven.
+This project implements a simple HTTP 1.1 server and client in Python. We made this project to get a deeper understanding of the HTTP Protocol while we were taking a Computer Networks class at KU Leuven.
 
 ## Python version & Libraries
 
